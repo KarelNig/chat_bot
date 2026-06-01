@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { ChatThread, Message } from "@/types/chat";
-import { CURRENT_USER_ID } from "@/types/chat";
+import { CURRENT_USER_ID, BOT_SENDER_ID } from "@/types/chat";
 
 function toMessageStatus(raw: string): Message["status"] {
   if (raw === "sending" || raw === "sent" || raw === "failed") return raw;
@@ -66,6 +66,22 @@ export async function insertMessage(id: string, threadId: string, text: string):
     .insert({ id, thread_id: threadId, sender_id: CURRENT_USER_ID, text, status: "sent" });
   if (error) {
     console.error("[supabase] insertMessage:", error.message);
+    return false;
+  }
+  return true;
+}
+
+export async function insertBotMessage(
+  id: string,
+  threadId: string,
+  text: string,
+): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from("messages")
+    .insert({ id, thread_id: threadId, sender_id: BOT_SENDER_ID, text, status: "sent" });
+  if (error) {
+    console.error("[supabase] insertBotMessage:", error.message);
     return false;
   }
   return true;

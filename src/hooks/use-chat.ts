@@ -2,11 +2,18 @@
 
 import { useState, useCallback, useEffect } from "react";
 import type { ChatThread, Message } from "@/types/chat";
-import { CURRENT_USER_ID } from "@/types/chat";
+import { CURRENT_USER_ID, BOT_SENDER_ID } from "@/types/chat";
 import { MOCK_THREADS } from "@/lib/mock-data";
 import { generateId } from "@/lib/utils";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { fetchThreads, fetchMessages, insertThread, insertMessage } from "@/lib/supabase-api";
+import {
+  fetchThreads,
+  fetchMessages,
+  insertThread,
+  insertMessage,
+  insertBotMessage,
+} from "@/lib/supabase-api";
+import { getRandomResponse, getRandomDelay, sleep } from "@/lib/ai-bot";
 
 interface UseChatReturn {
   threads: ChatThread[];
@@ -16,6 +23,7 @@ interface UseChatReturn {
   searchQuery: string;
   filteredThreads: ChatThread[];
   isLoading: boolean;
+  isBotTyping: boolean;
   selectThread: (id: string | null) => void;
   setSearchQuery: (q: string) => void;
   startNewDraft: () => void;
@@ -32,8 +40,8 @@ export function useChat(): UseChatReturn {
   const [draftThread, setDraftThread] = useState<ChatThread | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isBotTyping, setIsBotTyping] = useState(false);
 
-  // Initial thread load — Supabase when configured, mock data as fallback
   useEffect(() => {
     async function load(): Promise<void> {
       if (!isSupabaseConfigured) {
@@ -63,12 +71,12 @@ export function useChat(): UseChatReturn {
       ? draftThread
       : (threads.find((t) => t.id === activeThreadId) ?? null);
 
-  // Select a thread — lazy-loads its messages from Supabase, discards draft
   const selectThread = useCallback(
     (id: string | null): void => {
       if (draftThread !== null && id !== draftThread.id) {
         setDraftThread(null);
       }
+      setIsBotTyping(false);
       setActiveThreadId(id);
       if (!id || !isSupabaseConfigured) return;
 
@@ -86,7 +94,6 @@ export function useChat(): UseChatReturn {
     [draftThread],
   );
 
-  // Open a blank draft workspace — not added to the sidebar until first send
   const startNewDraft = useCallback((): void => {
     const draft: ChatThread = {
       id: generateId(),
@@ -95,6 +102,7 @@ export function useChat(): UseChatReturn {
       messages: [],
       lastUpdated: new Date(),
     };
+    setIsBotTyping(false);
     setDraftThread(draft);
     setActiveThreadId(draft.id);
   }, []);
@@ -104,7 +112,35 @@ export function useChat(): UseChatReturn {
       if (!activeThreadId || !text.trim()) return;
       const trimmed = text.trim();
 
-      // ── Draft promotion: first message creates the persisted thread ───────
+      // Schedules the bot reply for a given persisted thread.
+      // Runs independently of DB persistence so the UI is never blocked.
+      async function scheduleBot(threadId: string): Promise<void> {
+        setIsBotTyping(true);
+        await sleep(getRandomDelay());
+
+        const botMsg: Message = {
+          id: makeId(),
+          senderId: BOT_SENDER_ID,
+          text: getRandomResponse(),
+          timestamp: new Date(),
+          status: "sent",
+        };
+
+        setThreads((prev) =>
+          prev.map((t) =>
+            t.id === threadId
+              ? { ...t, messages: [...t.messages, botMsg], lastUpdated: new Date() }
+              : t,
+          ),
+        );
+        setIsBotTyping(false);
+
+        if (isSupabaseConfigured) {
+          await insertBotMessage(botMsg.id, threadId, botMsg.text);
+        }
+      }
+
+      // ── Draft promotion ───────────────────────────────────────────────────
       if (draftThread !== null && activeThreadId === draftThread.id) {
         const frozenDraft = draftThread;
         const newThreadId = makeId();
@@ -127,9 +163,8 @@ export function useChat(): UseChatReturn {
         setDraftThread(null);
         setActiveThreadId(newThreadId);
 
-        if (!isSupabaseConfigured) return;
-
         async function persistDraft(): Promise<void> {
+          if (!isSupabaseConfigured) return;
           const threadOk = await insertThread(newThreadId, title);
           const msgOk = threadOk ? await insertMessage(msgId, newThreadId, trimmed) : false;
           setThreads((prev) =>
@@ -145,11 +180,13 @@ export function useChat(): UseChatReturn {
             ),
           );
         }
+
         void persistDraft();
+        void scheduleBot(newThreadId);
         return;
       }
 
-      // ── Normal send: append to an existing persisted thread ───────────────
+      // ── Normal send ───────────────────────────────────────────────────────
       const msgId = makeId();
       const newMsg: Message = {
         id: msgId,
@@ -167,10 +204,10 @@ export function useChat(): UseChatReturn {
         ),
       );
 
-      if (!isSupabaseConfigured) return;
-
       const threadIdSnapshot = activeThreadId;
+
       async function persistMessage(): Promise<void> {
+        if (!isSupabaseConfigured) return;
         const ok = await insertMessage(msgId, threadIdSnapshot, trimmed);
         setThreads((prev) =>
           prev.map((t) =>
@@ -185,7 +222,9 @@ export function useChat(): UseChatReturn {
           ),
         );
       }
+
       void persistMessage();
+      void scheduleBot(threadIdSnapshot);
     },
     [activeThreadId, draftThread, threads],
   );
@@ -198,6 +237,7 @@ export function useChat(): UseChatReturn {
     searchQuery,
     filteredThreads,
     isLoading,
+    isBotTyping,
     selectThread,
     setSearchQuery,
     startNewDraft,

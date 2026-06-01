@@ -13,18 +13,17 @@ export default function Home(): React.JSX.Element {
     activeThread,
     draftThread,
     searchQuery,
+    isBotTyping,
     selectThread,
     setSearchQuery,
     startNewDraft,
     sendMessage,
   } = useChat();
 
-  // Show sidebar on mobile only when nothing is open (no thread, no draft)
   const showSidebar = activeThreadId === null && draftThread === null;
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      {/* Sidebar */}
       <div
         className={[
           "flex-shrink-0 flex flex-col w-full md:w-72 lg:w-80 h-full",
@@ -46,7 +45,6 @@ export default function Home(): React.JSX.Element {
         />
       </div>
 
-      {/* Chat pane */}
       <div
         className={[
           "flex-1 flex flex-col min-w-0 h-full",
@@ -59,6 +57,7 @@ export default function Home(): React.JSX.Element {
               key={activeThread.id}
               thread={activeThread}
               isDraft={draftThread !== null && activeThread.id === draftThread.id}
+              isBotTyping={isBotTyping}
               onBack={() => {
                 selectThread(null);
               }}

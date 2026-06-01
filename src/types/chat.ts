@@ -16,3 +16,4 @@ export interface ChatThread {
 }
 
 export const CURRENT_USER_ID = "me";
+export const BOT_SENDER_ID = "bot";

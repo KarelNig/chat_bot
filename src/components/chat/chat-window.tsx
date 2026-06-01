@@ -9,6 +9,7 @@ import { MessageInput } from "./message-input";
 interface ChatWindowProps {
   thread: ChatThread;
   isDraft: boolean;
+  isBotTyping: boolean;
   onBack: () => void;
   onSend: (text: string) => void;
 }
@@ -16,15 +17,13 @@ interface ChatWindowProps {
 export function ChatWindow({
   thread,
   isDraft,
+  isBotTyping,
   onBack,
   onSend,
 }: ChatWindowProps): React.JSX.Element {
-  const statusLabel = isDraft
-    ? "Start a conversation"
-    : thread.type === "ai"
-      ? "AI Bot Ready"
-      : "Online";
   const label = isDraft ? "New Chat" : (thread.participantName ?? thread.title);
+
+  const statusLabel = isDraft ? "Start a conversation" : isBotTyping ? "Typing..." : "Online";
 
   return (
     <motion.div
@@ -37,7 +36,6 @@ export function ChatWindow({
     >
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-200 bg-white flex-shrink-0">
-        {/* Back — mobile only */}
         <button
           onClick={onBack}
           aria-label="Back to chat list"
@@ -46,18 +44,16 @@ export function ChatWindow({
           <ArrowLeft size={18} />
         </button>
 
-        {/* Avatar — unified purple Bot icon */}
         <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center">
           <Bot size={16} className="text-white" />
         </span>
 
-        {/* Name + status */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{label}</p>
           <p
             className={[
-              "text-xs font-medium",
-              isDraft ? "text-violet-500" : "text-emerald-500",
+              "text-xs font-medium transition-colors",
+              isDraft ? "text-violet-500" : isBotTyping ? "text-violet-500" : "text-emerald-500",
             ].join(" ")}
           >
             {statusLabel}
@@ -65,17 +61,13 @@ export function ChatWindow({
         </div>
       </header>
 
-      {/* Draft hint banner */}
       {isDraft && (
         <div className="mx-4 mt-4 px-4 py-3 rounded-xl bg-violet-50 border border-violet-100 text-sm text-violet-700 text-center">
           This conversation will appear in your history after you send the first message.
         </div>
       )}
 
-      {/* Messages */}
-      <MessagesArea messages={thread.messages} />
-
-      {/* Input */}
+      <MessagesArea messages={thread.messages} isBotTyping={isBotTyping} />
       <MessageInput onSend={onSend} />
     </motion.div>
   );

@@ -4,10 +4,12 @@ import { useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { Message } from "@/types/chat";
 import { MessageBubble } from "./message-bubble";
+import { TypingIndicator } from "./typing-indicator";
 import { formatDate } from "@/lib/utils";
 
 interface MessagesAreaProps {
   messages: Message[];
+  isBotTyping: boolean;
 }
 
 interface MessageGroup {
@@ -15,12 +17,12 @@ interface MessageGroup {
   items: Message[];
 }
 
-export function MessagesArea({ messages }: MessagesAreaProps): React.JSX.Element {
+export function MessagesArea({ messages, isBotTyping }: MessagesAreaProps): React.JSX.Element {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, isBotTyping]);
 
   const groups: MessageGroup[] = [];
   for (const msg of messages) {
@@ -35,11 +37,12 @@ export function MessagesArea({ messages }: MessagesAreaProps): React.JSX.Element
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1 bg-white">
-      {messages.length === 0 && (
+      {messages.length === 0 && !isBotTyping && (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-gray-400 text-sm">No messages yet. Say hello!</p>
         </div>
       )}
+
       {groups.map((group) => (
         <div key={group.label} className="flex flex-col gap-2">
           <div className="flex items-center gap-3 my-3">
@@ -56,6 +59,10 @@ export function MessagesArea({ messages }: MessagesAreaProps): React.JSX.Element
           </div>
         </div>
       ))}
+
+      {/* Typing indicator lives at the bottom of the stream */}
+      <AnimatePresence>{isBotTyping && <TypingIndicator key="typing" />}</AnimatePresence>
+
       <div ref={bottomRef} />
     </div>
   );
