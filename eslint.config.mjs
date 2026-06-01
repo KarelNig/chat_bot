@@ -45,7 +45,22 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Relax rules for JS/MJS config files (no type-checking needed)
+  // Relax unsafe rules at the Supabase integration boundary.
+  // The DB client returns loosely-typed responses; we map them to strong types
+  // in supabase-api.ts so the rest of the app stays fully typed.
+  {
+    files: ["src/lib/supabase-api.ts"],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-unnecessary-condition": "off",
+    },
+  },
+
+  // Relax rules for JS/MJS config files
   {
     files: ["**/*.mjs", "**/*.cjs", "**/*.js", "vitest.setup.ts", "vitest.config.ts"],
     rules: {
