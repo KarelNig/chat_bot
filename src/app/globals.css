@@ -8,7 +8,6 @@
   box-sizing: border-box;
 }
 
-/* Thin scrollbar for webkit */
 ::-webkit-scrollbar {
   width: 4px;
 }
@@ -16,15 +15,14 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: #d1d5db;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: #9ca3af;
 }
 
-/* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3f3f46 transparent;
+  scrollbar-color: #d1d5db transparent;
 }

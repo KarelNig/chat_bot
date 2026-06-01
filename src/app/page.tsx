@@ -11,18 +11,20 @@ export default function Home(): React.JSX.Element {
     filteredThreads,
     activeThreadId,
     activeThread,
+    draftThread,
     searchQuery,
-    setActiveThreadId,
+    selectThread,
     setSearchQuery,
-    createNewThread,
+    startNewDraft,
     sendMessage,
   } = useChat();
 
-  const showSidebar = activeThreadId === null;
+  // Show sidebar on mobile only when nothing is open (no thread, no draft)
+  const showSidebar = activeThreadId === null && draftThread === null;
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      {/* Sidebar: full-width on mobile when no thread active, fixed column on desktop */}
+      {/* Sidebar */}
       <div
         className={[
           "flex-shrink-0 flex flex-col w-full md:w-72 lg:w-80 h-full",
@@ -32,18 +34,19 @@ export default function Home(): React.JSX.Element {
         <Sidebar
           threads={filteredThreads}
           activeThreadId={activeThreadId}
+          draftActive={draftThread !== null}
           searchQuery={searchQuery}
           onSelectThread={(id) => {
-            setActiveThreadId(id);
+            selectThread(id);
           }}
-          onNewChat={createNewThread}
+          onNewChat={startNewDraft}
           onSearchChange={(q) => {
             setSearchQuery(q);
           }}
         />
       </div>
 
-      {/* Chat pane: full-width on mobile when thread active, flex-1 on desktop */}
+      {/* Chat pane */}
       <div
         className={[
           "flex-1 flex flex-col min-w-0 h-full",
@@ -55,8 +58,9 @@ export default function Home(): React.JSX.Element {
             <ChatWindow
               key={activeThread.id}
               thread={activeThread}
+              isDraft={draftThread !== null && activeThread.id === draftThread.id}
               onBack={() => {
-                setActiveThreadId(null);
+                selectThread(null);
               }}
               onSend={sendMessage}
             />

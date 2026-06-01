@@ -21,8 +21,8 @@ export function ThreadItem({ thread, isActive, onClick }: ThreadItemProps): Reac
       layout
       onClick={onClick}
       className={[
-        "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors",
-        isActive ? "bg-violet-600/15 text-violet-50" : "hover:bg-white/5 text-zinc-300",
+        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors",
+        isActive ? "bg-violet-50 ring-1 ring-violet-200" : "hover:bg-gray-100 text-gray-700",
       ].join(" ")}
       whileHover={{ x: 2 }}
       whileTap={{ scale: 0.98 }}
@@ -30,8 +30,8 @@ export function ThreadItem({ thread, isActive, onClick }: ThreadItemProps): Reac
       {/* Avatar */}
       <span
         className={[
-          "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold",
-          thread.type === "ai" ? "bg-violet-600 text-white" : "bg-zinc-700 text-zinc-200",
+          "flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold",
+          thread.type === "ai" ? "bg-violet-600 text-white" : "bg-gray-200 text-gray-600",
         ].join(" ")}
       >
         {thread.type === "ai" ? "AI" : initials}
@@ -40,10 +40,24 @@ export function ThreadItem({ thread, isActive, onClick }: ThreadItemProps): Reac
       {/* Text */}
       <span className="flex-1 min-w-0">
         <span className="flex items-center justify-between gap-1">
-          <span className="font-medium text-sm truncate text-zinc-100">{thread.title}</span>
-          <span className="flex-shrink-0 text-xs text-zinc-500">{time}</span>
+          <span
+            className={[
+              "font-medium text-sm truncate",
+              isActive ? "text-violet-800" : "text-gray-900",
+            ].join(" ")}
+          >
+            {thread.title}
+          </span>
+          <span className="flex-shrink-0 text-xs text-gray-400">{time}</span>
         </span>
-        <span className="block text-xs text-zinc-400 truncate mt-0.5">{preview}</span>
+        <span
+          className={[
+            "block text-xs truncate mt-0.5",
+            isActive ? "text-violet-600" : "text-gray-500",
+          ].join(" ")}
+        >
+          {preview}
+        </span>
       </span>
     </motion.button>
   );

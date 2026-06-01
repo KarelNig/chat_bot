@@ -8,6 +8,7 @@ import { ThreadItem } from "./thread-item";
 interface SidebarProps {
   threads: ChatThread[];
   activeThreadId: string | null;
+  draftActive: boolean;
   searchQuery: string;
   onSelectThread: (id: string) => void;
   onNewChat: () => void;
@@ -17,26 +18,32 @@ interface SidebarProps {
 export function Sidebar({
   threads,
   activeThreadId,
+  draftActive,
   searchQuery,
   onSelectThread,
   onNewChat,
   onSearchChange,
 }: SidebarProps): React.JSX.Element {
   return (
-    <aside className="flex flex-col h-full bg-zinc-900 border-r border-zinc-800">
+    <aside className="flex flex-col h-full bg-gray-50 border-r border-gray-200">
       {/* Brand header */}
-      <div className="flex items-center gap-2 px-4 py-5 border-b border-zinc-800">
-        <span className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
+      <div className="flex items-center gap-2.5 px-4 py-5 border-b border-gray-200">
+        <span className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center flex-shrink-0">
           <MessageSquare size={16} className="text-white" />
         </span>
-        <span className="text-base font-bold text-white tracking-tight">CloudMix</span>
+        <span className="text-base font-bold text-gray-900 tracking-tight">Zimran Chat</span>
       </div>
 
       {/* New chat button */}
       <div className="px-3 pt-4 pb-2">
         <button
           onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white text-sm font-semibold transition-colors"
+          className={[
+            "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors",
+            draftActive
+              ? "bg-violet-100 text-violet-700 ring-2 ring-violet-300"
+              : "bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white",
+          ].join(" ")}
         >
           <Plus size={16} />
           New Chat
@@ -45,8 +52,8 @@ export function Sidebar({
 
       {/* Search */}
       <div className="px-3 pb-3">
-        <label className="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2 border border-zinc-700 focus-within:border-violet-500 transition-colors">
-          <Search size={14} className="text-zinc-500 flex-shrink-0" />
+        <label className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200 focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
+          <Search size={14} className="text-gray-400 flex-shrink-0" />
           <input
             type="text"
             value={searchQuery}
@@ -54,14 +61,14 @@ export function Sidebar({
               onSearchChange(e.target.value);
             }}
             placeholder="Search chats"
-            className="flex-1 bg-transparent text-sm text-zinc-200 placeholder-zinc-500 outline-none"
+            className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none"
           />
         </label>
       </div>
 
       {/* Thread list */}
       <nav className="flex-1 overflow-y-auto px-2 pb-4">
-        <p className="px-2 pb-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+        <p className="px-2 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
           Messages ({threads.length})
         </p>
         <motion.ul layout className="flex flex-col gap-0.5">
@@ -73,7 +80,7 @@ export function Sidebar({
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.18 }}
               >
                 <ThreadItem
                   thread={thread}
@@ -86,20 +93,23 @@ export function Sidebar({
             ))}
           </AnimatePresence>
           {threads.length === 0 && (
-            <li className="px-3 py-6 text-center text-sm text-zinc-500">No chats found</li>
+            <li className="px-3 py-6 text-center text-sm text-gray-400">No chats found</li>
           )}
         </motion.ul>
       </nav>
 
-      {/* Footer user info */}
-      <div className="px-4 py-3 border-t border-zinc-800">
+      {/* Footer: user profile */}
+      <div className="px-4 py-3 border-t border-gray-200 bg-white">
         <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-full bg-violet-700 flex items-center justify-center text-xs font-bold text-white">
-            SM
+          <span className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+            G
           </span>
           <span className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-zinc-100 truncate">Samurai Meow</p>
-            <p className="text-xs text-zinc-500">Online</p>
+            <p className="text-sm font-semibold text-gray-800 truncate">Guest</p>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <p className="text-xs text-gray-500">Online</p>
+            </div>
           </span>
         </div>
       </div>

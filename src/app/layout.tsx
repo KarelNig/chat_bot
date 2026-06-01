@@ -6,7 +6,7 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
 export const metadata: Metadata = {
-  title: "CloudMix — Chat",
+  title: "Zimran Chat",
   description: "Modern real-time chat application",
 };
 
@@ -15,7 +15,7 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>): React.JSX.Element {
   return (
     <html lang="en" className={`${geist.variable} h-full`}>
-      <body className="h-full bg-zinc-950 text-zinc-100 antialiased font-sans overflow-hidden">
+      <body className="h-full bg-white text-gray-900 antialiased font-sans overflow-hidden">
         {children}
       </body>
     </html>

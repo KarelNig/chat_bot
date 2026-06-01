@@ -34,18 +34,18 @@ export function MessagesArea({ messages }: MessagesAreaProps): React.JSX.Element
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1">
+    <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1 bg-white">
       {messages.length === 0 && (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-zinc-500 text-sm">No messages yet. Say hello!</p>
+          <p className="text-gray-400 text-sm">No messages yet. Say hello!</p>
         </div>
       )}
       {groups.map((group) => (
         <div key={group.label} className="flex flex-col gap-2">
           <div className="flex items-center gap-3 my-3">
-            <div className="flex-1 h-px bg-zinc-800" />
-            <span className="text-xs text-zinc-500 font-medium px-2">{group.label}</span>
-            <div className="flex-1 h-px bg-zinc-800" />
+            <div className="flex-1 h-px bg-gray-100" />
+            <span className="text-xs text-gray-400 font-medium px-2">{group.label}</span>
+            <div className="flex-1 h-px bg-gray-100" />
           </div>
           <div className="flex flex-col gap-2">
             <AnimatePresence initial={false}>

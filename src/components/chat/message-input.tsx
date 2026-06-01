@@ -26,8 +26,8 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps): R
   };
 
   return (
-    <div className="px-4 py-4 border-t border-zinc-800 bg-zinc-900">
-      <div className="flex items-end gap-3 bg-zinc-800 rounded-2xl px-4 py-3 border border-zinc-700 focus-within:border-violet-500 transition-colors">
+    <div className="px-4 py-4 border-t border-gray-200 bg-white">
+      <div className="flex items-end gap-3 bg-gray-50 rounded-2xl px-4 py-3 border border-gray-200 focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
         <textarea
           rows={1}
           value={value}
@@ -37,19 +37,19 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps): R
           onKeyDown={handleKeyDown}
           placeholder="Write a message..."
           disabled={disabled}
-          className="flex-1 resize-none bg-transparent text-sm text-zinc-100 placeholder-zinc-500 outline-none leading-relaxed max-h-32 overflow-y-auto"
+          className="flex-1 resize-none bg-transparent text-sm text-gray-900 placeholder-gray-400 outline-none leading-relaxed max-h-32 overflow-y-auto"
           style={{ scrollbarWidth: "none" }}
         />
         <button
           onClick={handleSubmit}
           disabled={!value.trim() || disabled}
           aria-label="Send message"
-          className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-700 disabled:cursor-not-allowed"
+          className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors bg-violet-600 hover:bg-violet-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
         >
-          <Send size={15} className="text-white" />
+          <Send size={15} className="text-white disabled:text-gray-400" />
         </button>
       </div>
-      <p className="mt-1.5 text-center text-xs text-zinc-600">
+      <p className="mt-1.5 text-center text-xs text-gray-400">
         Enter to send · Shift+Enter for new line
       </p>
     </div>
