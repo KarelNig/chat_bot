@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, Bot, User, Sparkles } from "lucide-react";
+import { ArrowLeft, Bot } from "lucide-react";
 import type { ChatThread } from "@/types/chat";
 import { MessagesArea } from "./messages-area";
 import { MessageInput } from "./message-input";
@@ -46,24 +46,9 @@ export function ChatWindow({
           <ArrowLeft size={18} />
         </button>
 
-        {/* Avatar */}
-        <span
-          className={[
-            "flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold",
-            isDraft
-              ? "bg-violet-100 text-violet-600"
-              : thread.type === "ai"
-                ? "bg-violet-600 text-white"
-                : "bg-gray-100 text-gray-600",
-          ].join(" ")}
-        >
-          {isDraft ? (
-            <Sparkles size={16} />
-          ) : thread.type === "ai" ? (
-            <Bot size={16} />
-          ) : (
-            <User size={16} />
-          )}
+        {/* Avatar — unified purple Bot icon */}
+        <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center">
+          <Bot size={16} className="text-white" />
         </span>
 
         {/* Name + status */}

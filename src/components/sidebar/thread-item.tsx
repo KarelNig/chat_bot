@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Bot } from "lucide-react";
 import type { ChatThread } from "@/types/chat";
 import { formatTime, getLastMessage } from "@/lib/utils";
 
@@ -13,8 +14,6 @@ interface ThreadItemProps {
 export function ThreadItem({ thread, isActive, onClick }: ThreadItemProps): React.JSX.Element {
   const preview = getLastMessage(thread.messages);
   const time = formatTime(thread.lastUpdated);
-  const label = thread.participantName ?? thread.title;
-  const initials = label.slice(0, 2).toUpperCase();
 
   return (
     <motion.button
@@ -27,14 +26,9 @@ export function ThreadItem({ thread, isActive, onClick }: ThreadItemProps): Reac
       whileHover={{ x: 2 }}
       whileTap={{ scale: 0.98 }}
     >
-      {/* Avatar */}
-      <span
-        className={[
-          "flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold",
-          thread.type === "ai" ? "bg-violet-600 text-white" : "bg-gray-200 text-gray-600",
-        ].join(" ")}
-      >
-        {thread.type === "ai" ? "AI" : initials}
+      {/* Avatar — unified purple Bot icon */}
+      <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center">
+        <Bot size={16} className="text-white" />
       </span>
 
       {/* Text */}
