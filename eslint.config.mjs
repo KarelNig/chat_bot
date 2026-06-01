@@ -7,7 +7,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
 
-  // Type-checked rules — applied only to TypeScript source files
+  // Type-checked rules
   {
     files: ["src/**/*.ts", "src/**/*.tsx"],
     extends: [...tseslint.configs.strictTypeChecked, ...tseslint.configs.stylisticTypeChecked],
@@ -45,9 +45,16 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Relax unsafe rules at the Supabase integration boundary.
-  // The DB client returns loosely-typed responses; we map them to strong types
-  // in supabase-api.ts so the rest of the app stays fully typed.
+  // Auth context: localStorage init after hydration is a legitimate useEffect pattern.
+  // The react-hooks/set-state-in-effect rule is relaxed here only.
+  {
+    files: ["src/contexts/auth-context.tsx"],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+
+  // Supabase integration boundary: DB client returns loosely-typed responses.
   {
     files: ["src/lib/supabase-api.ts"],
     rules: {
@@ -60,7 +67,7 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Relax rules for JS/MJS config files
+  // JS/MJS config files
   {
     files: ["**/*.mjs", "**/*.cjs", "**/*.js", "vitest.setup.ts", "vitest.config.ts"],
     rules: {

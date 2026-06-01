@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { Session } from "@/types/auth";
 import { getSession, saveSession, clearSession } from "@/lib/session";
 import { CURRENT_USER_ID } from "@/types/chat";
@@ -9,6 +9,7 @@ import { fetchProfileByUsername, createProfile } from "@/lib/supabase-api";
 
 interface AuthContextValue {
   user: Session | null;
+  isAuthLoading: boolean;
   login: (username: string) => Promise<string | null>;
   register: (username: string) => Promise<string | null>;
   logout: () => void;
@@ -17,8 +18,15 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  // Lazy initializer reads localStorage once on mount — avoids setState-in-effect
-  const [user, setUser] = useState<Session | null>(() => getSession());
+  // null on both SSR and first client render → no hydration mismatch
+  const [user, setUser] = useState<Session | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  // Runs only on the client after hydration
+  useEffect(() => {
+    setUser(getSession());
+    setIsAuthLoading(false);
+  }, []);
 
   const login = async (username: string): Promise<string | null> => {
     const trimmed = username.trim();
@@ -62,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthLoading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

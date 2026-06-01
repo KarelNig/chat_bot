@@ -11,12 +11,14 @@ import { EmptyState } from "@/components/chat/empty-state";
 import { CURRENT_USER_ID } from "@/types/chat";
 
 export default function Home(): React.JSX.Element {
-  const { user, logout } = useAuth();
+  const { user, isAuthLoading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) router.replace("/login");
-  }, [user, router]);
+    if (!isAuthLoading && !user) {
+      router.replace("/login");
+    }
+  }, [isAuthLoading, user, router]);
 
   const userId = user?.id ?? CURRENT_USER_ID;
 
@@ -34,7 +36,8 @@ export default function Home(): React.JSX.Element {
     sendMessage,
   } = useChat(userId);
 
-  if (!user) {
+  // Show spinner during hydration and while session is being read
+  if (isAuthLoading || !user) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50">
         <div className="w-6 h-6 rounded-full border-2 border-violet-600 border-t-transparent animate-spin" />
