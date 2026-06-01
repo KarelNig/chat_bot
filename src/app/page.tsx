@@ -1,12 +1,25 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/auth-context";
 import { useChat } from "@/hooks/use-chat";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { ChatWindow } from "@/components/chat/chat-window";
 import { EmptyState } from "@/components/chat/empty-state";
+import { CURRENT_USER_ID } from "@/types/chat";
 
 export default function Home(): React.JSX.Element {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!user) router.replace("/login");
+  }, [user, router]);
+
+  const userId = user?.id ?? CURRENT_USER_ID;
+
   const {
     filteredThreads,
     activeThreadId,
@@ -17,8 +30,17 @@ export default function Home(): React.JSX.Element {
     selectThread,
     setSearchQuery,
     startNewDraft,
+    startP2PThread,
     sendMessage,
-  } = useChat();
+  } = useChat(userId);
+
+  if (!user) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gray-50">
+        <div className="w-6 h-6 rounded-full border-2 border-violet-600 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   const showSidebar = activeThreadId === null && draftThread === null;
 
@@ -35,6 +57,7 @@ export default function Home(): React.JSX.Element {
           activeThreadId={activeThreadId}
           draftActive={draftThread !== null}
           searchQuery={searchQuery}
+          currentUser={user}
           onSelectThread={(id) => {
             selectThread(id);
           }}
@@ -42,6 +65,8 @@ export default function Home(): React.JSX.Element {
           onSearchChange={(q) => {
             setSearchQuery(q);
           }}
+          onStartP2PThread={startP2PThread}
+          onLogout={logout}
         />
       </div>
 
@@ -58,6 +83,7 @@ export default function Home(): React.JSX.Element {
               thread={activeThread}
               isDraft={draftThread !== null && activeThread.id === draftThread.id}
               isBotTyping={isBotTyping}
+              currentUserId={userId}
               onBack={() => {
                 selectThread(null);
               }}

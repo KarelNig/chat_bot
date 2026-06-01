@@ -2,12 +2,12 @@
 
 import { motion } from "framer-motion";
 import type { Message } from "@/types/chat";
-import { CURRENT_USER_ID } from "@/types/chat";
 import { formatTime } from "@/lib/utils";
 import { CheckCheck, Clock, AlertCircle } from "lucide-react";
 
 interface MessageBubbleProps {
   message: Message;
+  currentUserId: string;
 }
 
 const statusIcon = {
@@ -16,8 +16,8 @@ const statusIcon = {
   failed: <AlertCircle size={12} className="text-red-400" />,
 };
 
-export function MessageBubble({ message }: MessageBubbleProps): React.JSX.Element {
-  const isOwn = message.senderId === CURRENT_USER_ID;
+export function MessageBubble({ message, currentUserId }: MessageBubbleProps): React.JSX.Element {
+  const isOwn = message.senderId === currentUserId;
 
   return (
     <motion.div

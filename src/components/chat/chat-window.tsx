@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, Bot } from "lucide-react";
+import { ArrowLeft, Bot, Users } from "lucide-react";
 import type { ChatThread } from "@/types/chat";
 import { MessagesArea } from "./messages-area";
 import { MessageInput } from "./message-input";
@@ -10,6 +10,7 @@ interface ChatWindowProps {
   thread: ChatThread;
   isDraft: boolean;
   isBotTyping: boolean;
+  currentUserId: string;
   onBack: () => void;
   onSend: (text: string) => void;
 }
@@ -18,12 +19,19 @@ export function ChatWindow({
   thread,
   isDraft,
   isBotTyping,
+  currentUserId,
   onBack,
   onSend,
 }: ChatWindowProps): React.JSX.Element {
+  const isP2P = thread.type === "p2p";
   const label = isDraft ? "New Chat" : (thread.participantName ?? thread.title);
-
-  const statusLabel = isDraft ? "Start a conversation" : isBotTyping ? "Typing..." : "Online";
+  const statusLabel = isDraft
+    ? "Start a conversation"
+    : isBotTyping
+      ? "Typing…"
+      : isP2P
+        ? "Online"
+        : "AI Bot Ready";
 
   return (
     <motion.div
@@ -34,7 +42,6 @@ export function ChatWindow({
       transition={{ duration: 0.18 }}
       className="flex flex-col h-full bg-white"
     >
-      {/* Header */}
       <header className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-200 bg-white flex-shrink-0">
         <button
           onClick={onBack}
@@ -45,7 +52,11 @@ export function ChatWindow({
         </button>
 
         <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center">
-          <Bot size={16} className="text-white" />
+          {isP2P ? (
+            <Users size={15} className="text-white" />
+          ) : (
+            <Bot size={16} className="text-white" />
+          )}
         </span>
 
         <div className="flex-1 min-w-0">
@@ -53,7 +64,7 @@ export function ChatWindow({
           <p
             className={[
               "text-xs font-medium transition-colors",
-              isDraft ? "text-violet-500" : isBotTyping ? "text-violet-500" : "text-emerald-500",
+              isDraft || isBotTyping ? "text-violet-500" : "text-emerald-500",
             ].join(" ")}
           >
             {statusLabel}
@@ -67,7 +78,11 @@ export function ChatWindow({
         </div>
       )}
 
-      <MessagesArea messages={thread.messages} isBotTyping={isBotTyping} />
+      <MessagesArea
+        messages={thread.messages}
+        isBotTyping={isBotTyping}
+        currentUserId={currentUserId}
+      />
       <MessageInput onSend={onSend} />
     </motion.div>
   );

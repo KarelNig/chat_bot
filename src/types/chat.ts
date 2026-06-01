@@ -9,8 +9,9 @@ export interface Message {
 export interface ChatThread {
   id: string;
   title: string;
-  type: "ai" | "user";
+  type: "ai" | "p2p";
   participantName?: string;
+  peerId?: string; // other participant UUID in P2P threads
   messages: Message[];
   lastUpdated: Date;
 }

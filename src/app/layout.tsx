@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Geist } from "next/font/google";
+import { AuthProvider } from "@/contexts/auth-context";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
@@ -16,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} h-full`}>
       <body className="h-full bg-white text-gray-900 antialiased font-sans overflow-hidden">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

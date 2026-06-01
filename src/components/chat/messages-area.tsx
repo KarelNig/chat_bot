@@ -10,6 +10,7 @@ import { formatDate } from "@/lib/utils";
 interface MessagesAreaProps {
   messages: Message[];
   isBotTyping: boolean;
+  currentUserId: string;
 }
 
 interface MessageGroup {
@@ -17,7 +18,11 @@ interface MessageGroup {
   items: Message[];
 }
 
-export function MessagesArea({ messages, isBotTyping }: MessagesAreaProps): React.JSX.Element {
+export function MessagesArea({
+  messages,
+  isBotTyping,
+  currentUserId,
+}: MessagesAreaProps): React.JSX.Element {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,9 +32,9 @@ export function MessagesArea({ messages, isBotTyping }: MessagesAreaProps): Reac
   const groups: MessageGroup[] = [];
   for (const msg of messages) {
     const label = formatDate(msg.timestamp);
-    const lastGroup = groups.at(-1);
-    if (lastGroup?.label === label) {
-      lastGroup.items.push(msg);
+    const last = groups.at(-1);
+    if (last?.label === label) {
+      last.items.push(msg);
     } else {
       groups.push({ label, items: [msg] });
     }
@@ -42,7 +47,6 @@ export function MessagesArea({ messages, isBotTyping }: MessagesAreaProps): Reac
           <p className="text-gray-400 text-sm">No messages yet. Say hello!</p>
         </div>
       )}
-
       {groups.map((group) => (
         <div key={group.label} className="flex flex-col gap-2">
           <div className="flex items-center gap-3 my-3">
@@ -53,16 +57,13 @@ export function MessagesArea({ messages, isBotTyping }: MessagesAreaProps): Reac
           <div className="flex flex-col gap-2">
             <AnimatePresence initial={false}>
               {group.items.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+                <MessageBubble key={msg.id} message={msg} currentUserId={currentUserId} />
               ))}
             </AnimatePresence>
           </div>
         </div>
       ))}
-
-      {/* Typing indicator lives at the bottom of the stream */}
       <AnimatePresence>{isBotTyping && <TypingIndicator key="typing" />}</AnimatePresence>
-
       <div ref={bottomRef} />
     </div>
   );
