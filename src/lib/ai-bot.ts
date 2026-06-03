@@ -1,4 +1,11 @@
-const RESPONSES: readonly string[] = [
+import type { AiModelId } from "@/types/ai-model";
+
+interface ChatApiResponse {
+  text?: string;
+  error?: string;
+}
+
+const RANDOM_RESPONSES = [
   "That is a great point! I completely agree with your perspective.",
   "Interesting! Could you tell me a bit more about that?",
   "I see what you mean. Here is how I would approach this situation.",
@@ -11,21 +18,41 @@ const RESPONSES: readonly string[] = [
   "Fascinating! I had not thought of it from that angle before.",
   "You raise an excellent point. Here is my take on it.",
   "Let me think about that for a moment... Yes, I agree completely.",
-];
+] as const;
 
-/** Random AI response from the pool */
+/** Returns a random canned response from the pool (used in tests / offline mode). */
 export function getRandomResponse(): string {
-  return RESPONSES[Math.floor(Math.random() * RESPONSES.length)];
+  return RANDOM_RESPONSES[Math.floor(Math.random() * RANDOM_RESPONSES.length)];
 }
 
-/** Random delay in ms, uniformly distributed between 1 s and 5 s */
+/** Returns a random integer delay between 1000 ms and 5000 ms. */
 export function getRandomDelay(): number {
-  return Math.floor(Math.random() * 4000) + 1000;
+  return Math.floor(Math.random() * 4001) + 1000;
 }
 
-/** Awaitable sleep */
+/** Awaitable sleep utility. */
 export function sleep(ms: number): Promise<void> {
   return new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+/**
+ * Send the user's message to the server-side /api/chat Route Handler,
+ * which proxies to Gemini with the persona system instruction for modelId.
+ * Always resolves — returns a graceful error string on any failure.
+ */
+export async function getModelResponse(prompt: string, modelId: AiModelId): Promise<string> {
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, modelId }),
+    });
+    const data = (await res.json()) as ChatApiResponse;
+    if (data.text) return data.text;
+    return data.error ?? "The AI returned an unexpected response. Please try again.";
+  } catch {
+    return "Could not reach the AI service. Check your connection and try again.";
+  }
 }

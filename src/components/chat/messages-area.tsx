@@ -41,7 +41,7 @@ export function MessagesArea({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1 bg-white">
+    <div className="flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-1 bg-gray-50">
       {messages.length === 0 && !isBotTyping && (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-gray-400 text-sm">No messages yet. Say hello!</p>
@@ -49,10 +49,11 @@ export function MessagesArea({
       )}
       {groups.map((group) => (
         <div key={group.label} className="flex flex-col gap-2">
-          <div className="flex items-center gap-3 my-3">
-            <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-gray-400 font-medium px-2">{group.label}</span>
-            <div className="flex-1 h-px bg-gray-100" />
+          {/* Centered date separator */}
+          <div className="flex items-center justify-center my-3">
+            <span className="text-xs text-gray-400 font-medium bg-gray-100 px-3 py-1 rounded-full">
+              {group.label}
+            </span>
           </div>
           <div className="flex flex-col gap-2">
             <AnimatePresence initial={false}>

@@ -2,9 +2,39 @@ export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; username: string; avatar_url: string | null; created_at: string };
-        Insert: { id?: string; username: string; avatar_url?: string | null; created_at?: string };
-        Update: { id?: string; username?: string; avatar_url?: string | null; created_at?: string };
+        Row: {
+          id: string;
+          username: string;
+          password: string | null;
+          phone: string | null;
+          bio: string | null;
+          avatar_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          username: string;
+          password?: string | null;
+          phone?: string | null;
+          bio?: string | null;
+          avatar_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          username?: string;
+          password?: string | null;
+          phone?: string | null;
+          bio?: string | null;
+          avatar_url?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      thread_members: {
+        Row: { thread_id: string; user_id: string; joined_at: string };
+        Insert: { thread_id: string; user_id: string; joined_at?: string };
+        Update: { thread_id?: string; user_id?: string; joined_at?: string };
         Relationships: [];
       };
       threads: {
@@ -14,6 +44,8 @@ export interface Database {
           user_id: string;
           type: string;
           receiver_id: string | null;
+          description: string | null;
+          avatar_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -22,6 +54,8 @@ export interface Database {
           user_id: string;
           type?: string;
           receiver_id?: string | null;
+          description?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -30,6 +64,8 @@ export interface Database {
           user_id?: string;
           type?: string;
           receiver_id?: string | null;
+          description?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
         };
         Relationships: [];

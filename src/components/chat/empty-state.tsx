@@ -2,7 +2,7 @@ import { MessageSquare } from "lucide-react";
 
 export function EmptyState(): React.JSX.Element {
   return (
-    <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-gray-50 gap-4">
+    <div className="hidden md:flex flex-1 flex-col items-center justify-center h-full bg-gray-50 gap-4">
       <span className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center">
         <MessageSquare size={28} className="text-violet-500" />
       </span>

@@ -3,6 +3,9 @@
 import { useState, useCallback, useEffect } from "react";
 import type { ChatThread, Message } from "@/types/chat";
 import { BOT_SENDER_ID } from "@/types/chat";
+import type { AiModelId } from "@/types/ai-model";
+import { DEFAULT_MODEL_ID } from "@/types/ai-model";
+import type { Session } from "@/types/auth";
 import { MOCK_THREADS } from "@/lib/mock-data";
 import { generateId } from "@/lib/utils";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -12,11 +15,16 @@ import {
   insertThread,
   insertMessage,
   insertBotMessage,
-  createP2PThread,
   findExistingP2PThread,
+  createP2PThread,
+  addThreadMembers,
+  createGroupThread,
+  updateThread as updateThreadApi,
+  updateThreadTitle,
+  deleteThread as deleteThreadApi,
 } from "@/lib/supabase-api";
-import { getRandomResponse, getRandomDelay, sleep } from "@/lib/ai-bot";
-import type { Session } from "@/types/auth";
+import { getModelResponse } from "@/lib/ai-bot";
+import { savePersona } from "@/lib/persona-cache";
 
 interface UseChatReturn {
   threads: ChatThread[];
@@ -30,15 +38,23 @@ interface UseChatReturn {
   selectThread: (id: string | null) => void;
   setSearchQuery: (q: string) => void;
   startNewDraft: () => void;
-  startP2PThread: (target: Session) => void;
-  sendMessage: (text: string) => void;
+  startP2PChat: (peer: Session) => Promise<void>;
+  createGroup: (title: string, memberIds: string[]) => Promise<void>;
+  sendMessage: (text: string, modelId?: AiModelId) => void;
+  updateThread: (
+    threadId: string,
+    updates: { avatarUrl?: string | null; description?: string | null },
+  ) => Promise<void>;
+  deleteThread: (threadId: string) => Promise<void>;
 }
 
 function makeId(): string {
   return isSupabaseConfigured ? crypto.randomUUID() : generateId();
 }
 
-export function useChat(userId: string): UseChatReturn {
+// userId is null while auth is loading — guards below ensure we never hit
+// Supabase with an invalid value before a real UUID is available.
+export function useChat(userId: string | null): UseChatReturn {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [draftThread, setDraftThread] = useState<ChatThread | null>(null);
@@ -48,11 +64,18 @@ export function useChat(userId: string): UseChatReturn {
 
   useEffect(() => {
     async function load(): Promise<void> {
+      // No authenticated user yet — do not touch the database.
+      if (!userId) {
+        setThreads([]);
+        setIsLoading(false);
+        return;
+      }
       if (!isSupabaseConfigured) {
         setThreads(MOCK_THREADS);
         setIsLoading(false);
         return;
       }
+      setIsLoading(true);
       try {
         const data = await fetchAllThreads(userId);
         setThreads(data);
@@ -108,65 +131,146 @@ export function useChat(userId: string): UseChatReturn {
     setActiveThreadId(draft.id);
   }, []);
 
-  const startP2PThread = useCallback(
-    (target: Session): void => {
-      // Reuse existing local thread if found
-      const existing = threads.find((t) => t.type === "p2p" && t.peerId === target.id);
-      if (existing) {
-        selectThread(existing.id);
-        return;
+  const startP2PChat = useCallback(
+    async (peer: Session): Promise<void> => {
+      if (!userId) return;
+      const uid = userId; // capture narrowed string for use inside closures
+      setDraftThread(null);
+      setIsBotTyping(false);
+
+      if (isSupabaseConfigured) {
+        const existingId = await findExistingP2PThread(uid, peer.id);
+        if (existingId) {
+          setThreads((prev) => {
+            if (prev.find((t) => t.id === existingId)) return prev;
+            const thread: ChatThread = {
+              id: existingId,
+              title: peer.username,
+              type: "p2p",
+              peerId: peer.id,
+              participantName: peer.username,
+              avatarUrl: peer.avatarUrl ?? null,
+              messages: [],
+              lastUpdated: new Date(),
+            };
+            return [thread, ...prev];
+          });
+          setActiveThreadId(existingId);
+          try {
+            const msgs = await fetchMessages(existingId);
+            setThreads((prev) =>
+              prev.map((t) => (t.id === existingId ? { ...t, messages: msgs } : t)),
+            );
+          } catch (err) {
+            console.error("[use-chat] startP2PChat messages:", err);
+          }
+          return;
+        }
+        const threadId = makeId();
+        const ok = await createP2PThread(threadId, uid, peer.id, peer.username);
+        if (ok) await addThreadMembers(threadId, [uid, peer.id]);
+        const thread: ChatThread = {
+          id: threadId,
+          title: peer.username,
+          type: "p2p",
+          peerId: peer.id,
+          participantName: peer.username,
+          avatarUrl: peer.avatarUrl ?? null,
+          messages: [],
+          lastUpdated: new Date(),
+        };
+        setThreads((prev) => [thread, ...prev]);
+        setActiveThreadId(threadId);
+      } else {
+        const threadId = generateId();
+        const thread: ChatThread = {
+          id: threadId,
+          title: peer.username,
+          type: "p2p",
+          peerId: peer.id,
+          participantName: peer.username,
+          messages: [],
+          lastUpdated: new Date(),
+        };
+        setThreads((prev) => [thread, ...prev]);
+        setActiveThreadId(threadId);
       }
-      const newId = makeId();
-      const newThread: ChatThread = {
-        id: newId,
-        title: target.username,
-        type: "p2p",
-        participantName: target.username,
-        peerId: target.id,
+    },
+    [userId],
+  );
+
+  const createGroup = useCallback(
+    async (title: string, memberIds: string[]): Promise<void> => {
+      if (!userId) return;
+      const uid = userId; // capture narrowed string for use inside closures
+      const threadId = makeId();
+      const allMemberIds = [...new Set([uid, ...memberIds])];
+      const thread: ChatThread = {
+        id: threadId,
+        title,
+        type: "group",
+        memberIds: allMemberIds,
         messages: [],
         lastUpdated: new Date(),
       };
-      setThreads((prev) => [newThread, ...prev]);
+      setThreads((prev) => [thread, ...prev]);
+      setActiveThreadId(threadId);
       setDraftThread(null);
-      setIsBotTyping(false);
-      setActiveThreadId(newId);
-
-      if (!isSupabaseConfigured) return;
-
-      async function persist(): Promise<void> {
-        // Check DB for existing thread before creating
-        const existingId = await findExistingP2PThread(userId, target.id);
-        if (existingId) {
-          // Update local entry to use the real DB id
-          setThreads((prev) => prev.map((t) => (t.id === newId ? { ...t, id: existingId } : t)));
-          setActiveThreadId(existingId);
-          const messages = await fetchMessages(existingId);
-          setThreads((prev) => prev.map((t) => (t.id === existingId ? { ...t, messages } : t)));
-          return;
-        }
-        const ok = await createP2PThread(newId, userId, target.id, target.username);
-        if (!ok) {
-          setThreads((prev) => prev.filter((t) => t.id !== newId));
-          setActiveThreadId(null);
-        }
+      if (isSupabaseConfigured) {
+        await createGroupThread(threadId, uid, title, memberIds);
       }
-      void persist();
     },
-    [threads, userId, selectThread],
+    [userId],
+  );
+
+  const updateThread = useCallback(
+    async (
+      threadId: string,
+      updates: { avatarUrl?: string | null; description?: string | null },
+    ): Promise<void> => {
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId
+            ? {
+                ...t,
+                ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
+                ...(updates.description !== undefined
+                  ? { description: updates.description ?? undefined }
+                  : {}),
+                lastUpdated: new Date(),
+              }
+            : t,
+        ),
+      );
+      if (isSupabaseConfigured) {
+        await updateThreadApi(threadId, updates);
+      }
+    },
+    [],
   );
 
   const sendMessage = useCallback(
-    (text: string): void => {
-      if (!activeThreadId || !text.trim()) return;
+    (text: string, modelId: AiModelId = DEFAULT_MODEL_ID): void => {
+      if (!activeThreadId || !text.trim() || !userId) return;
+      const uid = userId; // capture narrowed string for use inside closures
       const trimmed = text.trim();
 
+      // Only AI threads get a bot response
+      const currentThread =
+        draftThread !== null && activeThreadId === draftThread.id
+          ? draftThread
+          : threads.find((t) => t.id === activeThreadId);
+      const isAiThread = !currentThread || currentThread.type === "ai";
+
       async function scheduleBot(threadId: string): Promise<void> {
+        if (!isAiThread) return;
         setIsBotTyping(true);
-        await sleep(getRandomDelay());
+        const botText = await getModelResponse(trimmed, modelId);
         const botMsg: Message = {
           id: makeId(),
           senderId: BOT_SENDER_ID,
-          text: getRandomResponse(),
+          text: botText,
+          modelId,
           timestamp: new Date(),
           status: "sent",
         };
@@ -178,12 +282,13 @@ export function useChat(userId: string): UseChatReturn {
           ),
         );
         setIsBotTyping(false);
+        savePersona(botMsg.id, modelId);
         if (isSupabaseConfigured) {
           await insertBotMessage(botMsg.id, threadId, botMsg.text);
         }
       }
 
-      // ── Draft promotion ───────────────────────────────────────────────
+      // ── Draft promotion (always AI type) ──────────────────────────────
       if (draftThread !== null && activeThreadId === draftThread.id) {
         const frozen = draftThread;
         const newThreadId = makeId();
@@ -192,7 +297,7 @@ export function useChat(userId: string): UseChatReturn {
         const title = `Chat ${count.toString()}`;
         const firstMsg: Message = {
           id: msgId,
-          senderId: userId,
+          senderId: uid,
           text: trimmed,
           timestamp: new Date(),
           status: isSupabaseConfigured ? "sending" : "sent",
@@ -213,8 +318,8 @@ export function useChat(userId: string): UseChatReturn {
 
         async function persistDraft(): Promise<void> {
           if (!isSupabaseConfigured) return;
-          const ok1 = await insertThread(newThreadId, userId, title, "ai");
-          const ok2 = ok1 ? await insertMessage(msgId, newThreadId, userId, trimmed) : false;
+          const ok1 = await insertThread(newThreadId, uid, title, "ai");
+          const ok2 = ok1 ? await insertMessage(msgId, newThreadId, uid, trimmed) : false;
           setThreads((prev) =>
             prev.map((t) =>
               t.id === newThreadId
@@ -229,7 +334,30 @@ export function useChat(userId: string): UseChatReturn {
           );
         }
         void persistDraft();
-        void scheduleBot(newThreadId); // drafts are always AI threads
+        void scheduleBot(newThreadId);
+
+        async function generateAndApplyTitle(threadId: string): Promise<void> {
+          try {
+            const res = await fetch("/api/generate-title", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt: trimmed }),
+            });
+            if (!res.ok) return;
+            const data = (await res.json()) as { title?: string };
+            const newTitle = data.title?.trim();
+            if (!newTitle) return;
+            setThreads((prev) =>
+              prev.map((t) => (t.id === threadId ? { ...t, title: newTitle } : t)),
+            );
+            if (isSupabaseConfigured) {
+              await updateThreadTitle(threadId, newTitle);
+            }
+          } catch {
+            // Title generation is non-critical — silently ignore failures
+          }
+        }
+        void generateAndApplyTitle(newThreadId);
         return;
       }
 
@@ -237,7 +365,7 @@ export function useChat(userId: string): UseChatReturn {
       const msgId = makeId();
       const newMsg: Message = {
         id: msgId,
-        senderId: userId,
+        senderId: uid,
         text: trimmed,
         timestamp: new Date(),
         status: isSupabaseConfigured ? "sending" : "sent",
@@ -251,12 +379,10 @@ export function useChat(userId: string): UseChatReturn {
       );
 
       const snapshot = activeThreadId;
-      const currentThread = threads.find((t) => t.id === snapshot);
-      const isP2P = currentThread?.type === "p2p";
 
       async function persistMsg(): Promise<void> {
         if (!isSupabaseConfigured) return;
-        const ok = await insertMessage(msgId, snapshot, userId, trimmed);
+        const ok = await insertMessage(msgId, snapshot, uid, trimmed);
         setThreads((prev) =>
           prev.map((t) =>
             t.id === snapshot
@@ -271,10 +397,20 @@ export function useChat(userId: string): UseChatReturn {
         );
       }
       void persistMsg();
-      if (!isP2P) void scheduleBot(snapshot); // bot only in AI threads
+      void scheduleBot(snapshot);
     },
     [activeThreadId, draftThread, threads, userId],
   );
+
+  const deleteThread = useCallback(async (threadId: string): Promise<void> => {
+    setThreads((prev) => prev.filter((t) => t.id !== threadId));
+    setActiveThreadId((prev) => (prev === threadId ? null : prev));
+    setDraftThread((prev) => (prev?.id === threadId ? null : prev));
+    setIsBotTyping(false);
+    if (isSupabaseConfigured) {
+      await deleteThreadApi(threadId);
+    }
+  }, []);
 
   return {
     threads,
@@ -288,7 +424,10 @@ export function useChat(userId: string): UseChatReturn {
     selectThread,
     setSearchQuery,
     startNewDraft,
-    startP2PThread,
+    startP2PChat,
+    createGroup,
     sendMessage,
+    updateThread,
+    deleteThread,
   };
 }

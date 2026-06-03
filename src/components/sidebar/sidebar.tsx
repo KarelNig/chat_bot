@@ -1,23 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, MessageSquare, LogOut } from "lucide-react";
+import { Plus, Search, Users } from "lucide-react";
 import type { ChatThread } from "@/types/chat";
 import type { Session } from "@/types/auth";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { ThreadItem } from "./thread-item";
 import { UserSearch } from "./user-search";
+
+type ActiveTab = "ai" | "messages";
 
 interface SidebarProps {
   threads: ChatThread[];
   activeThreadId: string | null;
   draftActive: boolean;
   searchQuery: string;
-  currentUser: Session;
+  currentUserId: string;
   onSelectThread: (id: string) => void;
   onNewChat: () => void;
+  onNewGroup: () => void;
+  onSelectUser: (user: Session) => void;
   onSearchChange: (q: string) => void;
-  onStartP2PThread: (target: Session) => void;
-  onLogout: () => void;
+  onDeleteThread: (id: string) => void;
 }
 
 export function Sidebar({
@@ -25,44 +30,50 @@ export function Sidebar({
   activeThreadId,
   draftActive,
   searchQuery,
-  currentUser,
+  currentUserId,
   onSelectThread,
   onNewChat,
+  onNewGroup,
+  onSelectUser,
   onSearchChange,
-  onStartP2PThread,
-  onLogout,
+  onDeleteThread,
 }: SidebarProps): React.JSX.Element {
-  const initials = currentUser.username.slice(0, 1).toUpperCase();
+  const [activeTab, setActiveTab] = useState<ActiveTab>("messages");
+
+  const displayed = threads.filter((t) =>
+    activeTab === "ai" ? t.type === "ai" : t.type === "p2p" || t.type === "group",
+  );
 
   return (
-    <aside className="flex flex-col h-full bg-gray-50 border-r border-gray-200">
-      {/* Brand */}
-      <div className="flex items-center gap-2.5 px-4 py-5 border-b border-gray-200">
-        <span className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center flex-shrink-0">
-          <MessageSquare size={16} className="text-white" />
-        </span>
-        <span className="text-base font-bold text-gray-900 tracking-tight">Zimran Chat</span>
-      </div>
-
-      {/* New Chat */}
-      <div className="px-3 pt-4 pb-2">
+    <aside className="flex flex-col h-full bg-white border-r border-gray-100 overflow-hidden">
+      {/* Action buttons */}
+      <div className="flex-shrink-0 px-4 pt-4 pb-2.5 flex gap-2">
         <button
           onClick={onNewChat}
           className={[
-            "w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors",
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-sm font-semibold transition-all",
             draftActive
-              ? "bg-violet-100 text-violet-700 ring-2 ring-violet-300"
-              : "bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white",
+              ? "bg-violet-100 text-violet-700 ring-2 ring-violet-200"
+              : "bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white shadow-sm",
           ].join(" ")}
         >
-          <Plus size={16} />
-          New AI Chat
+          <Plus size={14} strokeWidth={2.5} />
+          New Chat
         </button>
+        {isSupabaseConfigured && (
+          <button
+            onClick={onNewGroup}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-sm font-semibold transition-all bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700"
+          >
+            <Users size={14} strokeWidth={2} />
+            New Group
+          </button>
+        )}
       </div>
 
-      {/* Chat search */}
-      <div className="px-3 pb-2">
-        <label className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200 focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
+      {/* Search bar */}
+      <div className="flex-shrink-0 px-4 pb-3">
+        <label className="flex items-center gap-2.5 bg-gray-50 rounded-xl px-3.5 py-2.5 border border-gray-200 focus-within:border-violet-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-violet-100 transition-all">
           <Search size={14} className="text-gray-400 flex-shrink-0" />
           <input
             type="text"
@@ -76,17 +87,33 @@ export function Sidebar({
         </label>
       </div>
 
-      {/* Find People (P2P) */}
-      <UserSearch currentUserId={currentUser.id} onSelectUser={onStartP2PThread} />
+      {/* Tabs */}
+      <div className="flex-shrink-0 px-4 pb-3">
+        <div className="flex rounded-xl bg-gray-100 p-1 gap-1">
+          {(["ai", "messages"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => {
+                setActiveTab(tab);
+              }}
+              className={[
+                "flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all",
+                activeTab === tab
+                  ? "bg-white text-violet-700 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700",
+              ].join(" ")}
+            >
+              {tab === "ai" ? "AI Bots" : "Messages"}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Thread list */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-4">
-        <p className="px-2 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          Messages ({threads.length})
-        </p>
+      <nav className="flex-1 overflow-y-auto px-3 pb-2">
         <motion.ul layout className="flex flex-col gap-0.5">
           <AnimatePresence initial={false}>
-            {threads.map((thread) => (
+            {displayed.map((thread) => (
               <motion.li
                 key={thread.id}
                 layout
@@ -101,36 +128,31 @@ export function Sidebar({
                   onClick={() => {
                     onSelectThread(thread.id);
                   }}
+                  onDelete={
+                    thread.type === "ai"
+                      ? () => {
+                          onDeleteThread(thread.id);
+                        }
+                      : undefined
+                  }
                 />
               </motion.li>
             ))}
           </AnimatePresence>
-          {threads.length === 0 && (
-            <li className="px-3 py-6 text-center text-sm text-gray-400">No chats yet</li>
+          {displayed.length === 0 && (
+            <li className="px-3 py-8 text-center text-sm text-gray-400">
+              {activeTab === "ai" ? "No AI chats yet" : "No conversations yet"}
+            </li>
           )}
         </motion.ul>
       </nav>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-gray-200 bg-white flex items-center gap-3">
-        <span className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-          {initials}
-        </span>
-        <span className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate">{currentUser.username}</p>
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <p className="text-xs text-gray-500">Online</p>
-          </div>
-        </span>
-        <button
-          onClick={onLogout}
-          aria-label="Log out"
-          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-        >
-          <LogOut size={14} />
-        </button>
-      </div>
+      {/* Find People — Messages tab only */}
+      {activeTab === "messages" && (
+        <div className="flex-shrink-0 border-t border-gray-100 pt-1 pb-1">
+          <UserSearch currentUserId={currentUserId} onSelectUser={onSelectUser} />
+        </div>
+      )}
     </aside>
   );
 }
