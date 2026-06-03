@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useChat } from "@/hooks/use-chat";
 import { Sidebar } from "@/components/sidebar/sidebar";
@@ -64,7 +63,6 @@ export default function Home(): React.JSX.Element {
   }
 
   const showSidebar = activeThreadId === null && draftThread === null;
-  const mobileBackLabel = activeThread?.title ?? "New Chat";
 
   const handleSelectUser = (peer: Session): void => {
     void startP2PChat(peer);
@@ -79,7 +77,7 @@ export default function Home(): React.JSX.Element {
   };
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-white">
+    <div className="flex flex-col h-[100dvh] w-full overflow-hidden overflow-x-hidden bg-white">
       {/* Modals */}
       <SelfProfileModal
         open={selfProfileOpen}
@@ -109,23 +107,9 @@ export default function Home(): React.JSX.Element {
 
       {/* ROW 1 — Global top header */}
       <header className="flex-shrink-0 flex items-stretch border-b border-gray-100 bg-white">
-        {/* Left cell */}
+        {/* Left cell — logo */}
         <div className="flex-shrink-0 flex items-center px-5 py-4 md:w-72 lg:w-80">
-          {!showSidebar && (
-            <button
-              onClick={() => {
-                selectThread(null);
-              }}
-              aria-label="Back to chat list"
-              className="md:hidden flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft size={16} strokeWidth={2.5} />
-              <span className="truncate max-w-[180px]">{mobileBackLabel}</span>
-            </button>
-          )}
-          <div className={!showSidebar ? "hidden md:block" : "block"}>
-            <CloudMixLogo />
-          </div>
+          <CloudMixLogo />
         </div>
 
         {/* Right cell: avatar + username + logout */}
@@ -171,7 +155,7 @@ export default function Home(): React.JSX.Element {
       <div className="flex flex-1 overflow-hidden">
         <div
           className={[
-            "flex-shrink-0 flex flex-col w-full md:w-72 lg:w-80 h-full",
+            "flex-shrink-0 flex-col w-full md:w-72 lg:w-80 h-full",
             showSidebar ? "flex" : "hidden md:flex",
           ].join(" ")}
         >
@@ -194,8 +178,8 @@ export default function Home(): React.JSX.Element {
 
         <div
           className={[
-            "flex-1 flex flex-col min-w-0 h-full",
-            !showSidebar ? "flex" : "hidden md:flex",
+            "flex-col min-w-0 h-full",
+            !showSidebar ? "flex flex-1" : "hidden md:flex md:flex-1",
           ].join(" ")}
         >
           <AnimatePresence mode="wait">
@@ -209,6 +193,9 @@ export default function Home(): React.JSX.Element {
                 onSend={sendMessage}
                 onHeaderClick={() => {
                   setInfoModalOpen(true);
+                }}
+                onBack={() => {
+                  selectThread(null);
                 }}
               />
             ) : (

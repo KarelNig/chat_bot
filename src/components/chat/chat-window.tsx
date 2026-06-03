@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Bot, Users } from "lucide-react";
+import { ArrowLeft, Bot, Users } from "lucide-react";
 import type { ChatThread } from "@/types/chat";
 import type { AiModelId } from "@/types/ai-model";
 import { MessagesArea } from "./messages-area";
@@ -14,6 +14,7 @@ interface ChatWindowProps {
   currentUserId: string;
   onSend: (text: string, modelId?: AiModelId) => void;
   onHeaderClick: () => void;
+  onBack?: () => void;
 }
 
 export function ChatWindow({
@@ -23,6 +24,7 @@ export function ChatWindow({
   currentUserId,
   onSend,
   onHeaderClick,
+  onBack,
 }: ChatWindowProps): React.JSX.Element {
   const label = isDraft ? "New Chat" : thread.title;
 
@@ -52,45 +54,56 @@ export function ChatWindow({
       transition={{ duration: 0.18 }}
       className="flex flex-col h-full bg-white"
     >
-      {/* Chat header — clickable to open info modal */}
-      <button
-        onClick={onHeaderClick}
-        className="flex-shrink-0 flex items-center gap-3 px-5 py-3.5 bg-white w-full text-left hover:bg-gray-50 transition-colors"
-      >
-        {isDraft || thread.type === "ai" ? (
-          <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center">
-            <Bot size={16} className="text-white" strokeWidth={1.8} />
-          </span>
-        ) : thread.type === "group" && thread.avatarUrl ? (
-          <img
-            src={thread.avatarUrl}
-            alt={label}
-            className="flex-shrink-0 w-9 h-9 rounded-full object-cover"
-          />
-        ) : thread.type === "group" ? (
-          <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center">
-            <Users size={16} className="text-white" strokeWidth={1.8} />
-          </span>
-        ) : thread.avatarUrl ? (
-          <img
-            src={thread.avatarUrl}
-            alt={label}
-            className="flex-shrink-0 w-9 h-9 rounded-full object-cover"
-          />
-        ) : (
-          <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center text-sm font-bold text-white">
-            {label.slice(0, 1).toUpperCase()}
-          </span>
+      {/* Chat header */}
+      <div className="flex-shrink-0 flex items-center gap-1 px-3 py-3 bg-white">
+        {onBack && (
+          <button
+            onClick={onBack}
+            aria-label="Back to chat list"
+            className="flex md:hidden flex-shrink-0 items-center justify-center w-9 h-9 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            <ArrowLeft size={18} strokeWidth={2} />
+          </button>
         )}
-        <div>
-          <p className="text-sm font-semibold text-gray-900 leading-tight">{label}</p>
-          <p className={["text-xs font-medium leading-tight mt-0.5", statusClass].join(" ")}>
-            {statusLabel}
-          </p>
-        </div>
-      </button>
+        <button
+          onClick={onHeaderClick}
+          className="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl text-left hover:bg-gray-50 transition-colors"
+        >
+          {isDraft || thread.type === "ai" ? (
+            <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center">
+              <Bot size={16} className="text-white" strokeWidth={1.8} />
+            </span>
+          ) : thread.type === "group" && thread.avatarUrl ? (
+            <img
+              src={thread.avatarUrl}
+              alt={label}
+              className="flex-shrink-0 w-9 h-9 rounded-full object-cover"
+            />
+          ) : thread.type === "group" ? (
+            <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center">
+              <Users size={16} className="text-white" strokeWidth={1.8} />
+            </span>
+          ) : thread.avatarUrl ? (
+            <img
+              src={thread.avatarUrl}
+              alt={label}
+              className="flex-shrink-0 w-9 h-9 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex-shrink-0 w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center text-sm font-bold text-white">
+              {label.slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <div>
+            <p className="text-sm font-semibold text-gray-900 leading-tight">{label}</p>
+            <p className={["text-xs font-medium leading-tight mt-0.5", statusClass].join(" ")}>
+              {statusLabel}
+            </p>
+          </div>
+        </button>
+      </div>
 
-      {/* Separator line between bot header and message stream */}
+      {/* Separator line between header and message stream */}
       <div className="flex-shrink-0 border-b border-gray-100" />
 
       {isDraft && (
