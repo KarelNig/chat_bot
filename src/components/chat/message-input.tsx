@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Check, Bot, Code2, FileText, Wand2, BarChart3 } from "lucide-react";
+import { Send, Check, Bot, Code2, FileText, Wand2, BarChart3, Smile } from "lucide-react";
 import { AI_MODELS, DEFAULT_MODEL_ID, getModelConfig } from "@/types/ai-model";
 import type { AiModelId, AgentIconKey } from "@/types/ai-model";
 
@@ -10,6 +10,7 @@ interface MessageInputProps {
   onSend: (text: string, modelId?: AiModelId) => void;
   disabled?: boolean;
   isAiThread?: boolean;
+  currentUserId?: string;
 }
 
 const AGENT_ICONS: Record<AgentIconKey, React.ElementType> = {
@@ -20,6 +21,8 @@ const AGENT_ICONS: Record<AgentIconKey, React.ElementType> = {
   chart: BarChart3,
 };
 
+const POPULAR_EMOJIS = ["😀", "😂", "😍", "👍", "🔥", "🎉", "🚀", "❤️"];
+
 export function MessageInput({
   onSend,
   disabled = false,
@@ -28,9 +31,13 @@ export function MessageInput({
   const [value, setValue] = useState("");
   const [selectedModel, setSelectedModel] = useState<AiModelId>(DEFAULT_MODEL_ID);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
+  const emojiTriggerRef = useRef<HTMLButtonElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!popoverOpen) return;
@@ -51,6 +58,25 @@ export function MessageInput({
     };
   }, [popoverOpen]);
 
+  useEffect(() => {
+    if (!emojiOpen) return;
+    function handleOutsideClick(e: MouseEvent): void {
+      const target = e.target as Node;
+      if (
+        emojiRef.current &&
+        !emojiRef.current.contains(target) &&
+        emojiTriggerRef.current &&
+        !emojiTriggerRef.current.contains(target)
+      ) {
+        setEmojiOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [emojiOpen]);
+
   const handleSubmit = (): void => {
     const trimmed = value.trim();
     if (!trimmed || disabled) return;
@@ -60,6 +86,7 @@ export function MessageInput({
       onSend(trimmed);
     }
     setValue("");
+    setEmojiOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -69,14 +96,33 @@ export function MessageInput({
     }
   };
 
+  const insertEmoji = (emoji: string): void => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setValue((prev) => prev + emoji);
+      setEmojiOpen(false);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newValue = value.slice(0, start) + emoji + value.slice(end);
+    setValue(newValue);
+    setEmojiOpen(false);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + emoji.length, start + emoji.length);
+    }, 0);
+  };
+
   const activeModel = getModelConfig(selectedModel);
   const ActiveIcon = AGENT_ICONS[activeModel.iconKey];
   const hasText = value.trim().length > 0;
   const placeholder = isAiThread ? `Message ${activeModel.name}…` : "Write a message...";
+  const canEmoji = !isAiThread;
 
   return (
     <div className="flex-shrink-0 px-4 py-3 bg-white border-t border-gray-100">
-      <div className="flex items-end gap-3">
+      <div className="flex items-end gap-2">
         {/* ── Agent selector — AI threads only ───────────────────────── */}
         {isAiThread && (
           <div className="relative flex-shrink-0 self-end mb-0.5">
@@ -94,7 +140,6 @@ export function MessageInput({
               <ActiveIcon size={16} strokeWidth={2} />
             </button>
 
-            {/* ── Popover ────────────────────────────────────────────── */}
             <AnimatePresence>
               {popoverOpen && (
                 <motion.div
@@ -112,7 +157,6 @@ export function MessageInput({
                       Select Agent
                     </p>
                   </div>
-
                   {AI_MODELS.map((model) => {
                     const isActive = model.id === selectedModel;
                     const ItemIcon = AGENT_ICONS[model.iconKey];
@@ -157,9 +201,55 @@ export function MessageInput({
           </div>
         )}
 
+        {/* ── Emoji picker — non-AI threads only ─────────────────────── */}
+        {canEmoji && (
+          <div className="relative flex-shrink-0 self-end mb-0.5">
+            <button
+              ref={emojiTriggerRef}
+              type="button"
+              onClick={() => {
+                setEmojiOpen((o) => !o);
+              }}
+              aria-label="Insert emoji"
+              aria-expanded={emojiOpen}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-colors"
+            >
+              <Smile size={18} strokeWidth={1.8} />
+            </button>
+
+            <AnimatePresence>
+              {emojiOpen && (
+                <motion.div
+                  ref={emojiRef}
+                  initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 6 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  className="absolute bottom-full left-0 mb-2 z-50 p-2 bg-white border border-gray-200 rounded-xl shadow-xl grid grid-cols-4 gap-2 w-44 h-auto min-w-[170px]"
+                >
+                  {POPULAR_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => {
+                        insertEmoji(emoji);
+                      }}
+                      className="hover:bg-gray-100 p-1.5 rounded-md text-xl transition-colors"
+                      aria-label={emoji}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         {/* ── Textarea ───────────────────────────────────────────────── */}
         <div className="flex-1 bg-gray-100 rounded-2xl px-4 py-3 focus-within:bg-gray-50 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
           <textarea
+            ref={textareaRef}
             rows={1}
             value={value}
             onChange={(e) => {

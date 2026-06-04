@@ -74,6 +74,7 @@ export function ChatWindow({
               <Bot size={16} className="text-white" strokeWidth={1.8} />
             </span>
           ) : thread.type === "group" && thread.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={thread.avatarUrl}
               alt={label}
@@ -84,6 +85,7 @@ export function ChatWindow({
               <Users size={16} className="text-white" strokeWidth={1.8} />
             </span>
           ) : thread.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={thread.avatarUrl}
               alt={label}
@@ -120,7 +122,11 @@ export function ChatWindow({
       />
 
       {/* Input bar */}
-      <MessageInput onSend={onSend} isAiThread={isDraft || thread.type === "ai"} />
+      <MessageInput
+        onSend={onSend}
+        isAiThread={isDraft || thread.type === "ai"}
+        currentUserId={currentUserId}
+      />
     </motion.div>
   );
 }

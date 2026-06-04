@@ -11,6 +11,7 @@ import { ChatSkeleton } from "@/components/chat/chat-skeleton";
 import { EmptyState } from "@/components/chat/empty-state";
 import { CloudMixLogo } from "@/components/cloud-mix-logo";
 import { SelfProfileModal } from "@/components/modals/self-profile-modal";
+import { ProfileInfoModal } from "@/components/modals/profile-info-modal";
 import { ChatInfoModal } from "@/components/modals/chat-info-modal";
 import { CreateGroupModal } from "@/components/modals/create-group-modal";
 import type { Session } from "@/types/auth";
@@ -20,6 +21,7 @@ export default function Home(): React.JSX.Element {
   const { user, isAuthLoading, logout } = useAuth();
   const router = useRouter();
 
+  const [profileInfoOpen, setProfileInfoOpen] = useState(false);
   const [selfProfileOpen, setSelfProfileOpen] = useState(false);
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
@@ -79,6 +81,15 @@ export default function Home(): React.JSX.Element {
   return (
     <div className="flex flex-col h-[100dvh] w-full overflow-hidden overflow-x-hidden bg-white">
       {/* Modals */}
+      <ProfileInfoModal
+        open={profileInfoOpen}
+        user={user}
+        onClose={() => {
+          setProfileInfoOpen(false);
+        }}
+        onLogout={logout}
+        onEditProfile={openSelfProfile}
+      />
       <SelfProfileModal
         open={selfProfileOpen}
         onClose={() => {
@@ -112,42 +123,31 @@ export default function Home(): React.JSX.Element {
           <CloudMixLogo />
         </div>
 
-        {/* Right cell: avatar + username + logout */}
-        <div className="flex-1 flex items-center justify-end gap-3 px-5 border-l border-gray-100">
-          {/* Circular avatar */}
+        {/* Right cell — profile (avatar + name, no logout text) */}
+        <div className="flex-1 flex items-center justify-end px-5 border-l border-gray-100">
           <button
-            onClick={openSelfProfile}
-            aria-label="Edit profile"
-            className="flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 rounded-full"
+            onClick={() => {
+              setProfileInfoOpen(true);
+            }}
+            aria-label="Open profile"
+            className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2"
           >
             {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={user.avatarUrl}
                 alt={user.username}
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-100 hover:ring-violet-300 transition-all"
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-violet-100 hover:ring-violet-300 transition-all"
               />
             ) : (
-              <span className="w-10 h-10 rounded-full bg-violet-600 flex items-center justify-center text-sm font-bold text-white ring-2 ring-violet-100 hover:ring-violet-300 transition-all">
+              <span className="w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center text-sm font-bold text-white ring-2 ring-violet-100 hover:ring-violet-300 transition-all">
                 {user.username.slice(0, 1).toUpperCase()}
               </span>
             )}
-          </button>
-
-          {/* Text block */}
-          <div className="flex flex-col items-end">
-            <button
-              onClick={openSelfProfile}
-              className="text-sm font-semibold text-gray-900 leading-snug hover:text-violet-700 transition-colors"
-            >
+            <span className="text-sm font-semibold text-gray-900 leading-snug">
               {user.username}
-            </button>
-            <button
-              onClick={logout}
-              className="mt-0.5 text-xs font-medium text-violet-600 hover:text-violet-700 transition-colors leading-snug"
-            >
-              Logout
-            </button>
-          </div>
+            </span>
+          </button>
         </div>
       </header>
 
