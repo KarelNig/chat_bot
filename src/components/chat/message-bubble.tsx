@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCheck, Clock, AlertCircle } from "lucide-react";
+import { CheckCheck, Check, AlertCircle } from "lucide-react";
 import type { Message } from "@/types/chat";
 import { getModelConfig } from "@/types/ai-model";
 import { formatTime } from "@/lib/utils";
@@ -13,7 +13,7 @@ interface MessageBubbleProps {
 
 const STATUS_CONFIG = {
   sent: { Icon: CheckCheck, className: "text-violet-200", label: "Sent" },
-  sending: { Icon: Clock, className: "text-violet-200/60", label: "Sending…" },
+  sending: { Icon: Check, className: "text-gray-300", label: "Sending…" },
   failed: { Icon: AlertCircle, className: "text-red-300", label: "Failed" },
 };
 

@@ -1,5 +1,6 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { awaitAllCallbacks } from "@langchain/core/callbacks/promises";
 
 const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash"] as const;
 
@@ -22,7 +23,7 @@ export async function callGemini(params: GeminiCallParams): Promise<string | nul
     apiKey,
     systemInstruction,
     userPrompt,
-    maxOutputTokens = 512,
+    maxOutputTokens = 2048,
     temperature = 0.85,
   } = params;
 
@@ -48,6 +49,8 @@ export async function callGemini(params: GeminiCallParams): Promise<string | nul
         continue;
       }
 
+      // Flush LangSmith background callbacks before the serverless function exits
+      await awaitAllCallbacks();
       return text;
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
@@ -55,5 +58,6 @@ export async function callGemini(params: GeminiCallParams): Promise<string | nul
     }
   }
 
+  await awaitAllCallbacks();
   return null;
 }

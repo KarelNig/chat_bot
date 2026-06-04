@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { ChatThread, Message } from "@/types/chat";
 import { BOT_SENDER_ID } from "@/types/chat";
 import type { AiModelId } from "@/types/ai-model";
@@ -8,7 +8,7 @@ import { DEFAULT_MODEL_ID } from "@/types/ai-model";
 import type { Session } from "@/types/auth";
 import { MOCK_THREADS } from "@/lib/mock-data";
 import { generateId } from "@/lib/utils";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import {
   fetchAllThreads,
   fetchMessages,
@@ -58,9 +58,16 @@ export function useChat(userId: string | null): UseChatReturn {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [draftThread, setDraftThread] = useState<ChatThread | null>(null);
+  // Ref keeps the realtime subscription's closure up-to-date without re-subscribing
+  const activeThreadIdRef = useRef<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isBotTyping, setIsBotTyping] = useState(false);
+
+  // Keep the ref current so the realtime closure always reads the latest value
+  useEffect(() => {
+    activeThreadIdRef.current = activeThreadId;
+  }, [activeThreadId]);
 
   useEffect(() => {
     async function load(): Promise<void> {
@@ -89,6 +96,60 @@ export function useChat(userId: string | null): UseChatReturn {
     void load();
   }, [userId]);
 
+  // Realtime subscription — listen to all message inserts globally so that
+  // P2P/group messages from other users appear without a page reload and the
+  // sidebar preview updates immediately.
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !userId) return;
+    const uid = userId;
+
+    const channel = supabase
+      .channel("global-messages")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const row = payload.new as {
+            id: string;
+            thread_id: string;
+            sender_id: string;
+            text: string;
+            status: string;
+            created_at: string;
+          };
+          // Own messages are handled via optimistic updates — skip them here
+          if (row.sender_id === uid) return;
+          const incomingMsg: Message = {
+            id: row.id,
+            senderId: row.sender_id,
+            text: row.text,
+            timestamp: new Date(row.created_at),
+            status: "sent",
+          };
+          const isActiveThread = activeThreadIdRef.current === row.thread_id;
+          setThreads((prev) =>
+            prev.map((t) => {
+              if (t.id !== row.thread_id) return t;
+              // Guard against duplicates (realtime echo of already-optimistic rows)
+              if (t.messages.some((m) => m.id === incomingMsg.id)) return t;
+              return {
+                ...t,
+                messages: [...t.messages, incomingMsg],
+                lastUpdated: new Date(row.created_at),
+                // Increment badge only for background threads
+                unreadCount: isActiveThread ? (t.unreadCount ?? 0) : (t.unreadCount ?? 0) + 1,
+              };
+            }),
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase?.removeChannel(channel);
+    };
+  }, [userId]);
+
   const filteredThreads = threads.filter((t) =>
     t.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
@@ -103,6 +164,10 @@ export function useChat(userId: string | null): UseChatReturn {
       if (draftThread !== null && id !== draftThread.id) setDraftThread(null);
       setIsBotTyping(false);
       setActiveThreadId(id);
+      // Clear the unread badge as soon as the thread is opened
+      if (id) {
+        setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unreadCount: 0 } : t)));
+      }
       if (!id || !isSupabaseConfigured) return;
       const tid = id;
       async function load(): Promise<void> {

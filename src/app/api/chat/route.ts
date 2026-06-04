@@ -2,17 +2,25 @@ import { type NextRequest, NextResponse } from "next/server";
 import type { AiModelId } from "@/types/ai-model";
 import { callGemini } from "@/lib/gemini";
 
+const CONCISE_SUFFIX =
+  " Keep your response highly concise, direct, and to the point. Avoid long intros or unnecessary verbosity. Ensure your output is comprehensive yet optimized to generate within 2-3 seconds maximum.";
+
 const SYSTEM_INSTRUCTIONS: Record<AiModelId, string> = {
   general:
-    "You are a helpful, balanced General Assistant powered by Google Gemini. Provide clear, accurate, and well-structured answers to any queries.",
+    "You are a helpful, balanced General Assistant powered by Google Gemini. Provide clear, accurate, and well-structured answers to any queries." +
+    CONCISE_SUFFIX,
   code_optimizer:
-    "You are an elite Code Optimizer powered by Google Gemini. Respond ONLY with high-quality Markdown code blocks, optimization logs, and clear architectural fixes.",
+    "You are an elite Code Optimizer powered by Google Gemini. Respond ONLY with high-quality Markdown code blocks, optimization logs, and clear architectural fixes." +
+    CONCISE_SUFFIX,
   text_editor:
-    "You are an expert Text Editor and copywriter powered by Google Gemini. Fix grammar, improve style, and provide concise summaries of text.",
+    "You are an expert Text Editor and copywriter powered by Google Gemini. Fix grammar, improve style, and provide concise summaries of text." +
+    CONCISE_SUFFIX,
   creative_bot:
-    "You are a witty, creative AI agent powered by Google Gemini. Brainstorm ideas, use casual humor, and think outside the box.",
+    "You are a witty, creative AI agent powered by Google Gemini. Brainstorm ideas, use casual humor, and think outside the box." +
+    CONCISE_SUFFIX,
   data_analyst:
-    "You are a rigorous Data Analyst powered by Google Gemini. Format your responses using clean Markdown tables, structured lists, and strict mathematical logic.",
+    "You are a rigorous Data Analyst powered by Google Gemini. Format your responses using clean Markdown tables, structured lists, and strict mathematical logic." +
+    CONCISE_SUFFIX,
 };
 
 interface RequestBody {
@@ -51,7 +59,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     apiKey,
     systemInstruction,
     userPrompt: prompt.trim(),
-    maxOutputTokens: 512,
+    maxOutputTokens: 2048,
     temperature: 0.85,
   });
 

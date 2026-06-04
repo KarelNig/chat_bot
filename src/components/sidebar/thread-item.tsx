@@ -48,6 +48,7 @@ export function ThreadItem({
             />
           </span>
         ) : thread.type === "group" && thread.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={thread.avatarUrl}
             alt={thread.title}
@@ -67,6 +68,7 @@ export function ThreadItem({
             />
           </span>
         ) : thread.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={thread.avatarUrl}
             alt={thread.title}
@@ -109,11 +111,19 @@ export function ThreadItem({
             >
               {preview}
             </span>
-            {unread && !isActive && (
-              <span className="flex-shrink-0 min-w-[18px] h-[18px] rounded-full bg-violet-600 flex items-center justify-center text-[10px] font-bold text-white px-1">
-                {thread.unreadCount}
-              </span>
-            )}
+            <span
+              className={[
+                "flex-shrink-0 min-w-[18px] h-[18px] rounded-full bg-violet-600 flex items-center justify-center text-[10px] font-bold text-white px-1",
+                "transform transition-all duration-300 origin-center",
+                unread && !isActive
+                  ? "scale-100 opacity-100"
+                  : "scale-0 opacity-0 pointer-events-none",
+              ].join(" ")}
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {thread.unreadCount ?? 0}
+            </span>
           </span>
         </span>
       </motion.button>

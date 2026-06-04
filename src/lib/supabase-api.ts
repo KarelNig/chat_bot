@@ -109,6 +109,7 @@ export async function updateProfile(
 
 export async function fetchAllThreads(userId: string): Promise<ChatThread[]> {
   if (!supabase) return [];
+  const db = supabase;
 
   // Fetch group thread IDs the user belongs to via thread_members
   const { data: memberships } = await supabase
@@ -140,6 +141,35 @@ export async function fetchAllThreads(userId: string): Promise<ChatThread[]> {
   }
 
   const allRows = [...(directData ?? []), ...groupRows];
+  const threadIds = allRows.map((r) => r.id);
+
+  // Fetch the latest message for each thread in parallel so the sidebar
+  // shows last-message previews immediately without a separate lazy load.
+  interface LastMsgRow {
+    id: string;
+    thread_id: string;
+    sender_id: string;
+    text: string;
+    status: string;
+    created_at: string;
+  }
+  const lastMsgMap: Record<string, LastMsgRow> = {};
+  if (threadIds.length > 0) {
+    const lastMsgResults = await Promise.all(
+      threadIds.map((tid) =>
+        db
+          .from("messages")
+          .select("id, thread_id, sender_id, text, status, created_at")
+          .eq("thread_id", tid)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ),
+    );
+    for (const { data } of lastMsgResults) {
+      if (data) lastMsgMap[data.thread_id] = data;
+    }
+  }
 
   // Batch-resolve peer usernames for P2P threads
   const peerIds: string[] = [];
@@ -170,6 +200,17 @@ export async function fetchAllThreads(userId: string): Promise<ChatThread[]> {
       ? ((row.user_id === userId ? row.receiver_id : row.user_id) ?? undefined)
       : undefined;
     const peer = peerId ? peerMap[peerId] : undefined;
+    const lastMsgRow = lastMsgMap[row.id] ?? null;
+    const lastMsg: Message | null = lastMsgRow
+      ? {
+          id: lastMsgRow.id,
+          senderId: lastMsgRow.sender_id,
+          text: lastMsgRow.text,
+          timestamp: new Date(lastMsgRow.created_at),
+          status: toStatus(lastMsgRow.status),
+          modelId: toModelId(loadPersona(lastMsgRow.id)),
+        }
+      : null;
     return {
       id: row.id,
       title: peer?.username ?? row.title,
@@ -178,8 +219,8 @@ export async function fetchAllThreads(userId: string): Promise<ChatThread[]> {
       peerId,
       avatarUrl: isP2P ? (peer?.avatarUrl ?? null) : (row.avatar_url ?? null),
       description: row.description ?? undefined,
-      messages: [],
-      lastUpdated: new Date(row.created_at),
+      messages: lastMsg ? [lastMsg] : [],
+      lastUpdated: lastMsg ? lastMsg.timestamp : new Date(row.created_at),
     };
   });
 }
