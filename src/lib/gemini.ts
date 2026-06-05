@@ -61,3 +61,5 @@ export async function callGemini(params: GeminiCallParams): Promise<string | nul
   await awaitAllCallbacks();
   return null;
 }
+
+// Test pre-commit hooks for presentation purposes only — not exported from this module.
