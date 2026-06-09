@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Check, Bot, Code2, FileText, Wand2, BarChart3, Smile } from "lucide-react";
+import { Send, Check, Cpu, Sparkles, Bot, Layers, Smile } from "lucide-react";
 import { AI_MODELS, DEFAULT_MODEL_ID, getModelConfig } from "@/types/ai-model";
 import type { AiModelId, AgentIconKey } from "@/types/ai-model";
 
@@ -14,11 +14,10 @@ interface MessageInputProps {
 }
 
 const AGENT_ICONS: Record<AgentIconKey, React.ElementType> = {
-  bot: Bot,
-  code: Code2,
-  text: FileText,
-  creative: Wand2,
-  chart: BarChart3,
+  gpt: Cpu,
+  gemini: Sparkles,
+  claude: Bot,
+  deepseek: Layers,
 };
 
 const POPULAR_EMOJIS = ["😀", "😂", "😍", "👍", "🔥", "🎉", "🚀", "❤️"];
@@ -132,7 +131,7 @@ export function MessageInput({
               onClick={() => {
                 setPopoverOpen((o) => !o);
               }}
-              aria-label={`Agent: ${activeModel.name}. Click to switch.`}
+              aria-label={`Engine: ${activeModel.name}. Click to switch.`}
               aria-expanded={popoverOpen}
               className="w-9 h-9 rounded-full flex items-center justify-center text-white transition-transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-violet-400 shadow-sm"
               style={{ backgroundColor: activeModel.iconColor }}
@@ -145,7 +144,7 @@ export function MessageInput({
                 <motion.div
                   ref={popoverRef}
                   role="listbox"
-                  aria-label="Select agent"
+                  aria-label="Select AI engine"
                   initial={{ opacity: 0, scale: 0.95, y: 6 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 6 }}
@@ -154,7 +153,7 @@ export function MessageInput({
                 >
                   <div className="px-3.5 py-2.5 border-b border-gray-100">
                     <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
-                      Select Agent
+                      AI Engine
                     </p>
                   </div>
                   {AI_MODELS.map((model) => {
