@@ -50,6 +50,7 @@ export default function Home(): React.JSX.Element {
     sendMessage,
     updateThread,
     deleteThread,
+    loadMoreMessages,
   } = useChat(userId);
 
   if (isAuthLoading || !user) {
@@ -197,6 +198,7 @@ export default function Home(): React.JSX.Element {
                 onBack={() => {
                   selectThread(null);
                 }}
+                onLoadMore={() => void loadMoreMessages(activeThread.id)}
               />
             ) : (
               <EmptyState key="empty" />

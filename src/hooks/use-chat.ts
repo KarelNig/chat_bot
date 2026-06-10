@@ -11,7 +11,7 @@ import { generateId } from "@/lib/utils";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import {
   fetchAllThreads,
-  fetchMessages,
+  fetchMessagesPaginated,
   insertThread,
   insertMessage,
   insertBotMessage,
@@ -46,6 +46,7 @@ interface UseChatReturn {
     updates: { avatarUrl?: string | null; description?: string | null },
   ) => Promise<void>;
   deleteThread: (threadId: string) => Promise<void>;
+  loadMoreMessages: (threadId: string) => Promise<void>;
 }
 
 function makeId(): string {
@@ -172,8 +173,15 @@ export function useChat(userId: string | null): UseChatReturn {
       const tid = id;
       async function load(): Promise<void> {
         try {
-          const messages = await fetchMessages(tid);
-          setThreads((prev) => prev.map((t) => (t.id === tid ? { ...t, messages } : t)));
+          const { messages, hasMore } = await fetchMessagesPaginated(tid, 25);
+          const oldestTs = messages.length > 0 ? messages[0].timestamp.toISOString() : undefined;
+          setThreads((prev) =>
+            prev.map((t) =>
+              t.id === tid
+                ? { ...t, messages, hasMoreMessages: hasMore, oldestMessageTimestamp: oldestTs }
+                : t,
+            ),
+          );
         } catch (err) {
           console.error("[use-chat] load messages failed:", err);
         }
@@ -222,9 +230,19 @@ export function useChat(userId: string | null): UseChatReturn {
           });
           setActiveThreadId(existingId);
           try {
-            const msgs = await fetchMessages(existingId);
+            const { messages: msgs, hasMore } = await fetchMessagesPaginated(existingId, 25);
+            const oldestTs = msgs.length > 0 ? msgs[0].timestamp.toISOString() : undefined;
             setThreads((prev) =>
-              prev.map((t) => (t.id === existingId ? { ...t, messages: msgs } : t)),
+              prev.map((t) =>
+                t.id === existingId
+                  ? {
+                      ...t,
+                      messages: msgs,
+                      hasMoreMessages: hasMore,
+                      oldestMessageTimestamp: oldestTs,
+                    }
+                  : t,
+              ),
             );
           } catch (err) {
             console.error("[use-chat] startP2PChat messages:", err);
@@ -330,14 +348,15 @@ export function useChat(userId: string | null): UseChatReturn {
       async function scheduleBot(threadId: string): Promise<void> {
         if (!isAiThread) return;
         setIsBotTyping(true);
-        const botText = await getModelResponse(trimmed, modelId);
+        const { text: botText, isError } = await getModelResponse(trimmed, modelId);
         const botMsg: Message = {
           id: makeId(),
           senderId: BOT_SENDER_ID,
           text: botText,
           modelId,
           timestamp: new Date(),
-          status: "sent",
+          // "failed" status lets the UI render error bubbles differently
+          status: isError ? "failed" : "sent",
         };
         setThreads((prev) =>
           prev.map((t) =>
@@ -347,9 +366,12 @@ export function useChat(userId: string | null): UseChatReturn {
           ),
         );
         setIsBotTyping(false);
-        savePersona(botMsg.id, modelId);
-        if (isSupabaseConfigured) {
-          await insertBotMessage(botMsg.id, threadId, botMsg.text);
+        // Never persist error messages to the database
+        if (!isError) {
+          savePersona(botMsg.id, modelId);
+          if (isSupabaseConfigured) {
+            await insertBotMessage(botMsg.id, threadId, botMsg.text);
+          }
         }
       }
 
@@ -477,6 +499,40 @@ export function useChat(userId: string | null): UseChatReturn {
     }
   }, []);
 
+  const loadMoreMessages = useCallback(
+    async (threadId: string): Promise<void> => {
+      if (!isSupabaseConfigured) return;
+      const thread = threads.find((t) => t.id === threadId);
+      if (!thread?.hasMoreMessages || !thread.oldestMessageTimestamp) return;
+      try {
+        const { messages: older, hasMore } = await fetchMessagesPaginated(
+          threadId,
+          25,
+          thread.oldestMessageTimestamp,
+        );
+        if (older.length === 0) return;
+        const newOldestTs = older[0].timestamp.toISOString();
+        setThreads((prev) =>
+          prev.map((t) => {
+            if (t.id !== threadId) return t;
+            // Deduplicate in case realtime already added some of these rows
+            const existingIds = new Set(t.messages.map((m) => m.id));
+            const deduped = older.filter((m) => !existingIds.has(m.id));
+            return {
+              ...t,
+              messages: [...deduped, ...t.messages],
+              hasMoreMessages: hasMore,
+              oldestMessageTimestamp: newOldestTs,
+            };
+          }),
+        );
+      } catch (err) {
+        console.error("[use-chat] loadMoreMessages failed:", err);
+      }
+    },
+    [threads],
+  );
+
   return {
     threads,
     activeThreadId,
@@ -494,5 +550,6 @@ export function useChat(userId: string | null): UseChatReturn {
     sendMessage,
     updateThread,
     deleteThread,
+    loadMoreMessages,
   };
 }

@@ -15,6 +15,7 @@ interface ChatWindowProps {
   onSend: (text: string, modelId?: AiModelId) => void;
   onHeaderClick: () => void;
   onBack?: () => void;
+  onLoadMore?: () => void;
 }
 
 export function ChatWindow({
@@ -25,6 +26,7 @@ export function ChatWindow({
   onSend,
   onHeaderClick,
   onBack,
+  onLoadMore,
 }: ChatWindowProps): React.JSX.Element {
   const label = isDraft ? "New Chat" : thread.title;
 
@@ -119,6 +121,8 @@ export function ChatWindow({
         messages={thread.messages}
         isBotTyping={isBotTyping}
         currentUserId={currentUserId}
+        hasMoreMessages={thread.hasMoreMessages}
+        onLoadMore={onLoadMore}
       />
 
       {/* Input bar */}

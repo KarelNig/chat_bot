@@ -5,6 +5,12 @@ interface ChatApiResponse {
   error?: string;
 }
 
+export interface ModelResponse {
+  text: string;
+  /** True when the response is an error message, not an AI-generated reply. */
+  isError: boolean;
+}
+
 const RANDOM_RESPONSES = [
   "That is a great point! I completely agree with your perspective.",
   "Interesting! Could you tell me a bit more about that?",
@@ -38,11 +44,11 @@ export function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Send the user's message to the server-side /api/chat Route Handler,
- * which proxies to Gemini with the persona system instruction for modelId.
- * Always resolves — returns a graceful error string on any failure.
+ * Send the user's message to the server-side /api/chat Route Handler.
+ * Always resolves — returns a ModelResponse with isError=true on any failure
+ * so callers can distinguish real AI replies from error strings.
  */
-export async function getModelResponse(prompt: string, modelId: AiModelId): Promise<string> {
+export async function getModelResponse(prompt: string, modelId: AiModelId): Promise<ModelResponse> {
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -50,9 +56,15 @@ export async function getModelResponse(prompt: string, modelId: AiModelId): Prom
       body: JSON.stringify({ prompt, modelId }),
     });
     const data = (await res.json()) as ChatApiResponse;
-    if (data.text) return data.text;
-    return data.error ?? "The AI returned an unexpected response. Please try again.";
+    if (data.text) return { text: data.text, isError: false };
+    return {
+      text: data.error ?? "The AI returned an unexpected response. Please try again.",
+      isError: true,
+    };
   } catch {
-    return "Could not reach the AI service. Check your connection and try again.";
+    return {
+      text: "Could not reach the AI service. Check your connection and try again.",
+      isError: true,
+    };
   }
 }

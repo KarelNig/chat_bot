@@ -22,6 +22,10 @@ export interface ChatThread {
   unreadCount?: number;
   messages: Message[];
   lastUpdated: Date;
+  /** True when there are older messages in the DB not yet loaded. */
+  hasMoreMessages?: boolean;
+  /** ISO 8601 timestamp of the oldest currently loaded message — cursor for "load more". */
+  oldestMessageTimestamp?: string;
 }
 
 export const CURRENT_USER_ID = "me";

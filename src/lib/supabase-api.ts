@@ -385,6 +385,52 @@ export async function fetchMessages(threadId: string): Promise<Message[]> {
   }
 }
 
+/**
+ * Paginated message fetch — returns newest `limit` messages, optionally before a timestamp cursor.
+ * Results are returned in chronological order (oldest first) ready for display.
+ */
+export async function fetchMessagesPaginated(
+  threadId: string,
+  limit = 25,
+  beforeTimestamp?: string,
+): Promise<{ messages: Message[]; hasMore: boolean }> {
+  if (!supabase) return { messages: [], hasMore: false };
+  try {
+    let query = supabase
+      .from("messages")
+      .select("id, thread_id, sender_id, text, status, created_at")
+      .eq("thread_id", threadId)
+      .order("created_at", { ascending: false })
+      .limit(limit + 1); // one extra to detect whether older rows exist
+
+    if (beforeTimestamp) {
+      query = query.lt("created_at", beforeTimestamp);
+    }
+
+    const { data, error } = await query;
+    if (error || !data) return { messages: [], hasMore: false };
+
+    const hasMore = data.length > limit;
+    const rows = hasMore ? data.slice(0, limit) : data;
+
+    return {
+      // Reverse to chronological order (oldest → newest) for display
+      messages: rows.reverse().map((row) => ({
+        id: row.id,
+        senderId: row.sender_id,
+        text: row.text,
+        timestamp: new Date(row.created_at),
+        status: toStatus(row.status),
+        modelId: toModelId(loadPersona(row.id)),
+      })),
+      hasMore,
+    };
+  } catch (err) {
+    console.error("[supabase] fetchMessagesPaginated threw:", err);
+    return { messages: [], hasMore: false };
+  }
+}
+
 export async function insertMessage(
   id: string,
   threadId: string,

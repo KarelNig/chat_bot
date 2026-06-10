@@ -11,6 +11,8 @@ interface MessagesAreaProps {
   messages: Message[];
   isBotTyping: boolean;
   currentUserId: string;
+  hasMoreMessages?: boolean;
+  onLoadMore?: () => void;
 }
 
 interface MessageGroup {
@@ -22,6 +24,8 @@ export function MessagesArea({
   messages,
   isBotTyping,
   currentUserId,
+  hasMoreMessages,
+  onLoadMore,
 }: MessagesAreaProps): React.JSX.Element {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +46,18 @@ export function MessagesArea({
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-1 bg-gray-50">
+      {/* Load more button — shown at the top when older messages exist in the DB */}
+      {hasMoreMessages && onLoadMore && (
+        <div className="flex justify-center pt-1 pb-3">
+          <button
+            onClick={onLoadMore}
+            className="text-xs text-violet-600 hover:text-violet-700 font-medium px-4 py-1.5 rounded-full bg-violet-50 hover:bg-violet-100 transition-colors"
+          >
+            Load earlier messages
+          </button>
+        </div>
+      )}
+
       {messages.length === 0 && !isBotTyping && (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-gray-400 text-sm">No messages yet. Say hello!</p>
